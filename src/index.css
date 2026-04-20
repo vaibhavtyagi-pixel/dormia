@@ -1,0 +1,167 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --base: #070914;
+  --card: #111428;
+  --indigo: #7c83ff;
+  --indigo-light: #c8d0ff;
+  --indigo-pale: #1a2040;
+  --indigo-cloud: #0d1230;
+  --mint: #5de2b1;
+  --mint-pale: #183a33;
+  --amber: #f6c453;
+  --amber-warm: #2b2314;
+  --amber-pale: #4a3c1e;
+  --ink: #eef1ff;
+  --text-secondary: #dde3ff;
+  --border: rgba(124, 131, 255, 0.24);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(124, 131, 255, 0.18), transparent 36%),
+    radial-gradient(circle at 80% 10%, rgba(93, 226, 177, 0.12), transparent 30%),
+    var(--base);
+  color: var(--ink);
+  font-family: 'DM Sans', sans-serif;
+}
+
+input,
+select,
+textarea {
+  color: var(--ink);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #b8c1ef;
+  opacity: 1;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+@keyframes pulseSleep {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(110, 231, 183, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(110, 231, 183, 0);
+    transform: scale(1.05);
+  }
+}
+
+@keyframes pulseAwake {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.45);
+    transform: scale(1);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+    transform: scale(1.08);
+  }
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes countUpPop {
+  0% {
+    transform: translateY(4px);
+    opacity: 0.7;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes marqueeLeft {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+@keyframes indigoPulseBorder {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(61, 90, 241, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 0 2px rgba(61, 90, 241, 0.35);
+  }
+}
+
+.animate-pulse-sleep {
+  animation: pulseSleep 2.2s infinite ease-in-out;
+}
+
+.animate-flicker-awake {
+  animation: pulseAwake 1.8s infinite ease-in-out;
+}
+
+.animate-fade-up {
+  animation: fadeUp 0.35s both ease;
+}
+
+.animate-indigo-border {
+  animation: indigoPulseBorder 1.2s infinite ease-in-out;
+}
+
+.card {
+  border: 0.5px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(160deg, rgba(17, 20, 40, 0.95), rgba(14, 17, 34, 0.95));
+  backdrop-filter: blur(6px);
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(61, 90, 241, 0.08);
+}
+
+.card-hover {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+button {
+  transition: transform 0.1s ease, filter 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.count-up-pop {
+  animation: countUpPop 0.3s ease;
+}
+
+.ticker-track {
+  width: max-content;
+  min-width: 100%;
+  display: flex;
+  gap: 2rem;
+  animation: marqueeLeft 20s linear infinite;
+}
