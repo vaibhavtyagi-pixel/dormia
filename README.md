@@ -18,6 +18,7 @@ If Vercel says Firebase is missing API key, add these Environment Variables in t
 - `VITE_FIREBASE_MESSAGING_SENDER_ID`
 - `VITE_FIREBASE_APP_ID`
 - `VITE_FIREBASE_DATABASE_URL`
+- `VITE_GOOGLE_MAPS_API_KEY` (required for global live map + reverse geocoding city/country)
 - `VITE_GEMINI_API_KEY` (optional for Improve AI section)
 
 Use `.env.example` as reference for variable names.

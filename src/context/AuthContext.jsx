@@ -15,6 +15,47 @@ import { auth, db, hasFirebaseConfig, rtdb } from '../firebase.js';
 import { mockPlayers } from '../mockData.js';
 
 const AuthContext = createContext(null);
+const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
+
+function getBrowserCoords() {
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (position) =>
+        resolve({
+          lat: Number(position.coords.latitude.toFixed(5)),
+          lng: Number(position.coords.longitude.toFixed(5)),
+        }),
+      () => resolve(null),
+      { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+    );
+  });
+}
+
+async function reverseGeocode(lat, lng) {
+  if (!GOOGLE_MAPS_API_KEY) return { city: 'Unknown', country: 'Unknown' };
+  try {
+    const response = await fetch(
+      `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${GOOGLE_MAPS_API_KEY}`
+    );
+    if (!response.ok) return { city: 'Unknown', country: 'Unknown' };
+    const payload = await response.json();
+    const first = payload?.results?.[0];
+    if (!first?.address_components) return { city: 'Unknown', country: 'Unknown' };
+    const cityComponent =
+      first.address_components.find((item) => item.types?.includes('locality')) ||
+      first.address_components.find((item) => item.types?.includes('administrative_area_level_2'));
+    const countryComponent = first.address_components.find((item) => item.types?.includes('country'));
+    return {
+      city: cityComponent?.long_name ?? 'Unknown',
+      country: countryComponent?.long_name ?? 'Unknown',
+    };
+  } catch {
+    return { city: 'Unknown', country: 'Unknown' };
+  }
+}
 
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
@@ -51,6 +92,8 @@ export function AuthProvider({ children }) {
         const playerSnap = await getDoc(playerRef);
 
         if (!playerSnap.exists()) {
+          const coords = await getBrowserCoords();
+          const geo = coords ? await reverseGeocode(coords.lat, coords.lng) : { city: 'Unknown', country: 'Unknown' };
           await setDoc(playerRef, {
             displayName: user.displayName ?? 'Player',
             email: user.email ?? '',
@@ -62,6 +105,10 @@ export function AuthProvider({ children }) {
             hasAndroidApk: false,
             sleepTargetHours: 7,
             continent: 'Europe',
+            city: geo.city,
+            country: geo.country,
+            lat: coords?.lat ?? 40.4168,
+            lng: coords?.lng ?? -3.7038,
             createdAt: serverTimestamp(),
           });
 
@@ -69,17 +116,42 @@ export function AuthProvider({ children }) {
             isAsleep: false,
             displayName: user.displayName ?? 'Player',
             continent: 'Europe',
-            lat: 40.4168,
-            lng: -3.7038,
+            city: geo.city,
+            country: geo.country,
+            lat: coords?.lat ?? 40.4168,
+            lng: coords?.lng ?? -3.7038,
           });
         } else {
           const existing = playerSnap.data();
+          const needsLocation =
+            !Number.isFinite(existing?.lat) ||
+            !Number.isFinite(existing?.lng) ||
+            !existing?.city ||
+            !existing?.country ||
+            existing?.city === 'Unknown' ||
+            existing?.country === 'Unknown';
+          let coords = null;
+          let geo = { city: existing?.city ?? 'Unknown', country: existing?.country ?? 'Unknown' };
+          if (needsLocation) {
+            coords = await getBrowserCoords();
+            if (coords) {
+              geo = await reverseGeocode(coords.lat, coords.lng);
+              await updateDoc(playerRef, {
+                city: geo.city,
+                country: geo.country,
+                lat: coords.lat,
+                lng: coords.lng,
+              });
+            }
+          }
           await set(ref(rtdb, `dormia/players/${user.uid}`), {
             isAsleep: existing.isAsleep ?? false,
             displayName: existing.displayName ?? user.displayName ?? 'Player',
             continent: existing.continent ?? 'Europe',
-            lat: existing.lat ?? 40.4168,
-            lng: -3.7038,
+            city: geo.city,
+            country: geo.country,
+            lat: coords?.lat ?? existing.lat ?? 40.4168,
+            lng: coords?.lng ?? existing.lng ?? -3.7038,
           });
         }
       },
