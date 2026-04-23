@@ -25,8 +25,21 @@ if (!hasFirebaseConfig) {
   console.warn('Missing VITE_FIREBASE_* env vars. Firebase features are disabled until configured.');
 }
 
-const app = hasFirebaseConfig ? initializeApp(firebaseConfig) : null;
-export const auth = app ? getAuth(app) : null;
-export const db = app ? getFirestore(app) : null;
-export const rtdb = app ? getDatabase(app) : null;
+let app = null;
+let auth = null;
+let db = null;
+let rtdb = null;
+
+if (hasFirebaseConfig) {
+  try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    rtdb = getDatabase(app);
+  } catch (error) {
+    console.error('Firebase init failed. Running in offline-safe mode.', error);
+  }
+}
+
+export { app, auth, db, rtdb };
 

@@ -13,7 +13,16 @@ function ProtectedRoute({ children }) {
   const { currentUser, isLoading } = useAuth();
 
   if (isLoading) {
-    return <div className="min-h-screen bg-base" />;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-base px-4 text-center text-ink">
+        <div className="card max-w-md p-6">
+          <p className="font-sora text-lg font-semibold">Connecting DORMIA...</p>
+          <p className="mt-2 text-sm text-text-secondary">
+            If this takes too long, refresh once and verify Firebase env variables in Vercel.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!currentUser) {
