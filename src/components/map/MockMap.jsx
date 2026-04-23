@@ -44,16 +44,30 @@ function MockMap({ players, className = '' }) {
 
   return (
     <div
-      className={`card card-hover relative min-h-[380px] overflow-hidden bg-[#0b122e] ${className}`}
+      className={`card card-hover relative min-h-[380px] overflow-hidden bg-[#eef1f7] ${className}`}
       style={{
-        backgroundImage: 'radial-gradient(rgba(167,179,255,0.14) 1px, transparent 1px)',
-        backgroundSize: '24px 24px',
+        backgroundImage:
+          'linear-gradient(to bottom, rgba(255,255,255,0.66), rgba(233,237,245,0.75)), radial-gradient(rgba(157,167,186,0.2) 1px, transparent 1px)',
+        backgroundSize: '100% 100%, 20px 20px',
       }}
     >
       <svg className="absolute inset-0 h-full w-full opacity-100" viewBox="0 0 1000 500" preserveAspectRatio="none">
-        <path d="M80 190C130 130 220 120 290 160C350 195 330 260 265 280C200 300 120 280 90 240C70 220 70 205 80 190Z" fill="rgba(167,179,255,0.11)" />
-        <path d="M380 120C460 90 560 95 625 140C700 190 670 265 590 290C520 312 440 298 402 246C372 206 350 145 380 120Z" fill="rgba(167,179,255,0.11)" />
-        <path d="M705 160C760 130 835 135 890 170C935 200 932 256 883 282C825 312 755 302 720 258C686 214 675 180 705 160Z" fill="rgba(167,179,255,0.11)" />
+        <rect x="0" y="0" width="1000" height="500" fill="rgba(231,235,243,0.7)" />
+        <g fill="none" stroke="rgba(173,183,198,0.35)" strokeWidth="1">
+          <path d="M0 120 H1000" />
+          <path d="M0 180 H1000" />
+          <path d="M0 240 H1000" />
+          <path d="M0 300 H1000" />
+          <path d="M0 360 H1000" />
+        </g>
+        <g fill="rgba(201,206,216,0.96)" stroke="rgba(223,227,235,0.9)" strokeWidth="1.1">
+          <path d="M66 120L98 95L142 88L190 96L230 118L254 142L272 165L304 176L314 206L290 236L242 264L192 274L154 266L118 246L84 220L62 192L50 160Z" />
+          <path d="M260 288L286 274L310 288L324 318L306 344L278 352L252 334Z" />
+          <path d="M420 94L450 82L498 84L540 100L578 96L618 110L650 132L638 152L600 170L570 188L556 220L530 248L496 270L466 290L438 286L412 264L396 236L382 204L364 184L356 154L374 126Z" />
+          <path d="M536 286L562 280L584 292L596 314L590 342L572 366L552 392L532 410L510 398L500 372L508 342L520 318Z" />
+          <path d="M620 112L662 92L720 82L774 90L814 106L842 134L866 160L896 184L910 206L902 228L874 242L840 246L818 264L792 282L754 296L722 286L690 270L670 246L658 220L640 196L628 172L614 150Z" />
+          <path d="M836 304L868 296L900 304L922 322L928 344L912 360L882 370L852 360L834 340Z" />
+        </g>
       </svg>
       {clusters.map((cluster) => {
         const pos = toMapPosition(cluster.lat, cluster.lng);
@@ -89,17 +103,17 @@ function MockMap({ players, className = '' }) {
           </div>
         );
       })}
-      <div className="absolute right-3 top-3 rounded-full border border-border bg-card px-2 py-1 text-[10px] text-indigo-light">
+      <div className="absolute right-3 top-3 rounded-full border border-[#d9deeb] bg-white/90 px-2 py-1 text-[10px] text-[#64708d]">
         Built-in global map
       </div>
       <div className="absolute bottom-3 left-4 flex flex-wrap items-center gap-2 text-[10px]">
-        <span className="rounded-full border border-border bg-card px-3 py-1 font-medium text-indigo-light">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#4a5d86]">
           🌍 Global Live Map
         </span>
-        <span className="rounded-full border border-border bg-card px-3 py-1 font-medium text-mint">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#2f8e74]">
           😴 {asleepTotal} sleeping
         </span>
-        <span className="rounded-full border border-border bg-card px-3 py-1 font-medium text-amber">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#b67e0e]">
           ☀️ {awakeTotal} awake
         </span>
       </div>
