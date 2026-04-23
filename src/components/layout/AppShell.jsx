@@ -19,6 +19,10 @@ function SidebarContent({ onNavigate }) {
   const displayName = playerData?.displayName ?? 'Player';
 
   const handleSignOut = async () => {
+    if (!auth) {
+      navigate('/signin', { replace: true });
+      return;
+    }
     await signOut(auth);
     navigate('/signin', { replace: true });
   };

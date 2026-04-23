@@ -59,6 +59,7 @@ export function AuthProvider({ children }) {
             currentStreak: 0,
             longestStreak: 0,
             isAsleep: false,
+            hasAndroidApk: false,
             sleepTargetHours: 7,
             continent: 'Europe',
             createdAt: serverTimestamp(),
@@ -159,13 +160,14 @@ export function AuthProvider({ children }) {
     });
   };
 
-  const saveSettings = async ({ sleepTarget, continent }) => {
+  const saveSettings = async ({ sleepTarget, continent, hasAndroidApk }) => {
     if (!currentUser || !db || !rtdb) {
       return;
     }
     await updateDoc(doc(db, 'players', currentUser.uid), {
       sleepTargetHours: sleepTarget,
       continent,
+      hasAndroidApk: Boolean(hasAndroidApk),
     });
     await update(ref(rtdb, `dormia/players/${currentUser.uid}`), {
       continent,
@@ -176,6 +178,7 @@ export function AuthProvider({ children }) {
     () => ({
       sleepTarget: playerData?.sleepTargetHours ?? 7,
       continent: playerData?.continent ?? 'Europe',
+      hasAndroidApk: Boolean(playerData?.hasAndroidApk),
     }),
     [playerData]
   );

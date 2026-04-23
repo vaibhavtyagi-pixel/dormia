@@ -132,11 +132,20 @@ function ImprovePage() {
 
   const handleGeneratePlan = async () => {
     setIsGeneratingPlan(true);
+    const bestDaysSummary = bestDays
+      .map((day) => `${day.day}:${day.hoursSlept}h/+${day.xpEarned}xp`)
+      .join(', ');
     const plan = await generateCoachPlan({
+      displayName: currentUser.displayName ?? 'Player',
+      continent: currentUser.continent ?? 'Unknown',
+      hasAndroidApk: Boolean(currentUser.hasAndroidApk),
       streak: currentUser.currentStreak,
+      longestStreak: currentUser.longestStreak,
+      xp: currentUser.xp,
       sleepTargetHours,
       gapXp,
       nightsToClose,
+      bestDaysSummary,
     });
     setCoachPlan(plan);
     setIsGeneratingPlan(false);
@@ -238,13 +247,22 @@ function ImprovePage() {
             <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink">
               <span className="font-semibold">Objective:</span> {coachPlan.objective}
             </p>
-            <div className="grid gap-2 md:grid-cols-3">
+            <div className="grid gap-2 md:grid-cols-2">
               {coachPlan.actions.map((action) => (
                 <p key={action} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-secondary">
                   {action}
                 </p>
               ))}
             </div>
+            {Array.isArray(coachPlan.schedule) && coachPlan.schedule.length > 0 ? (
+              <div className="grid gap-2 md:grid-cols-3">
+                {coachPlan.schedule.map((step) => (
+                  <p key={step} className="rounded-lg border border-border bg-indigo-pale/50 px-3 py-2 text-sm text-ink">
+                    {step}
+                  </p>
+                ))}
+              </div>
+            ) : null}
             <p className="text-sm italic text-text-secondary">{coachPlan.motivation}</p>
             <p className="text-xs text-indigo-light">
               Source: {coachPlan.source === 'gemini' ? 'Gemini API' : 'Local fallback'}

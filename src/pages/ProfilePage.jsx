@@ -10,6 +10,7 @@ function ProfilePage() {
   const safePlayerData = playerData ?? mockCurrentUser;
   const [sleepTarget, setSleepTarget] = useState(settings.sleepTarget);
   const [continent, setContinent] = useState(settings.continent);
+  const [hasAndroidApk, setHasAndroidApk] = useState(settings.hasAndroidApk);
   const [showToast, setShowToast] = useState(false);
   const ranking = [...players].sort((a, b) => b.xp - a.xp).findIndex((player) => player.uid === safePlayerData.uid) + 1;
   const nextMilestone = Math.ceil(safePlayerData.xp / 500) * 500;
@@ -35,7 +36,8 @@ function ProfilePage() {
   useEffect(() => {
     setSleepTarget(settings.sleepTarget);
     setContinent(settings.continent);
-  }, [settings.sleepTarget, settings.continent]);
+    setHasAndroidApk(settings.hasAndroidApk);
+  }, [settings.sleepTarget, settings.continent, settings.hasAndroidApk]);
 
   if (isLoading && !playerData) {
     return <section className="animate-fade-up min-h-[40vh]" />;
@@ -43,7 +45,7 @@ function ProfilePage() {
 
   const handleSave = (event) => {
     event.preventDefault();
-    saveSettings({ sleepTarget: Number(sleepTarget), continent });
+    saveSettings({ sleepTarget: Number(sleepTarget), continent, hasAndroidApk });
     setShowToast(true);
     window.setTimeout(() => {
       setShowToast(false);
@@ -174,6 +176,16 @@ function ProfilePage() {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="flex items-center justify-between rounded-xl border border-border bg-base px-3 py-2 text-sm text-ink">
+              <span>Has Android APK</span>
+              <input
+                type="checkbox"
+                checked={hasAndroidApk}
+                onChange={(event) => setHasAndroidApk(event.target.checked)}
+                className="h-4 w-4 accent-indigo"
+              />
             </label>
 
             <button
