@@ -1,7 +1,10 @@
+const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+
 function buildLocalPlan({ streak, sleepTargetHours, gapXp, nightsToClose }) {
   const riskLevel = streak === 0 ? 'high' : streak < 4 ? 'medium' : 'low';
   return {
     source: 'local',
+    fallbackReason: 'local_default',
     riskLevel,
     objective: `Hit ${sleepTargetHours}h tonight to protect your momentum.`,
     actions: [
@@ -22,25 +25,41 @@ function buildLocalPlan({ streak, sleepTargetHours, gapXp, nightsToClose }) {
 }
 
 function safeJsonParse(text) {
-  const cleaned = text
+  const cleaned = String(text)
     .replace(/```json/gi, '')
     .replace(/```/g, '')
     .trim();
   return JSON.parse(cleaned);
 }
 
+function extractTextFromResponse(data) {
+  const parts = data?.candidates?.[0]?.content?.parts;
+  if (Array.isArray(parts) && parts[0]?.text) return parts[0].text;
+  return '';
+}
+
+async function callGeminiGenerateContent(apiKey, model, body) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  return res;
+}
+
 export async function generateCoachPlan(input) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
   if (!apiKey) {
-    return buildLocalPlan(input);
+    return { ...buildLocalPlan(input), fallbackReason: 'missing_api_key' };
   }
 
   const prompt = `
 You are an elite sleep performance coach for a gamified app.
-Return ONLY valid JSON with keys:
+Return ONLY valid JSON (no markdown) with keys:
 objective (string),
 riskLevel ("low"|"medium"|"high"),
-actions (array of 5-7 short strings),
+actions (array of exactly 3 strings),
 schedule (array of exactly 3 strings: afternoon, evening, pre-bed),
 motivation (string).
 
@@ -64,41 +83,88 @@ Constraints:
 - Use clear action verbs.
   `.trim();
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.6 },
-        }),
+  const requestBody = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.6,
+      responseMimeType: 'application/json',
+    },
+  };
+
+  let lastError = 'unknown';
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      const response = await callGeminiGenerateContent(apiKey, model, requestBody);
+      const raw = await response.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        lastError = `http_${response.status}_invalid_json`;
+        if (!response.ok) continue;
+        return { ...buildLocalPlan(input), fallbackReason: lastError };
       }
-    );
 
-    if (!response.ok) {
-      return buildLocalPlan(input);
+      if (!response.ok) {
+        const msg = data?.error?.message ? String(data.error.message).slice(0, 200) : raw.slice(0, 200);
+        if (response.status === 404) {
+          lastError = `http_404:${msg || 'not_found'}`;
+          continue;
+        }
+        if (msg.toLowerCase().includes('not found') && (response.status === 400 || response.status === 404)) {
+          lastError = `http_${response.status}:${msg}`;
+          continue;
+        }
+        return {
+          ...buildLocalPlan(input),
+          fallbackReason: `http_${response.status}:${msg || 'error'}`,
+        };
+      }
+
+      const finish = data?.candidates?.[0]?.finishReason;
+      if (finish && finish !== 'STOP') {
+        lastError = `finish_${finish}`;
+        continue;
+      }
+
+      const text = extractTextFromResponse(data);
+      if (!text) {
+        if (data?.promptFeedback?.blockReason) {
+          return { ...buildLocalPlan(input), fallbackReason: `blocked_${data.promptFeedback.blockReason}` };
+        }
+        lastError = 'empty_candidate';
+        continue;
+      }
+
+      let parsed;
+      try {
+        parsed = safeJsonParse(text);
+      } catch {
+        lastError = 'json_parse';
+        continue;
+      }
+
+      if (!parsed?.objective || !Array.isArray(parsed?.actions) || !Array.isArray(parsed?.schedule)) {
+        lastError = 'invalid_model_shape';
+        continue;
+      }
+
+      return {
+        source: 'gemini',
+        fallbackReason: null,
+        model,
+        riskLevel: parsed.riskLevel ?? 'medium',
+        objective: parsed.objective,
+        actions: parsed.actions.slice(0, 3),
+        schedule: Array.isArray(parsed.schedule) ? parsed.schedule.slice(0, 3) : [],
+        motivation: parsed.motivation ?? 'Stay consistent tonight.',
+      };
+    } catch (error) {
+      const message = error?.message ? String(error.message) : 'request_error';
+      lastError = `request_or_parse_error:${message.slice(0, 120)}`;
     }
-
-    const data = await response.json();
-    const text = data?.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    const parsed = safeJsonParse(text);
-
-    if (!parsed?.objective || !Array.isArray(parsed?.actions)) {
-      return buildLocalPlan(input);
-    }
-
-    return {
-      source: 'gemini',
-      riskLevel: parsed.riskLevel ?? 'medium',
-      objective: parsed.objective,
-      actions: parsed.actions.slice(0, 7),
-      schedule: Array.isArray(parsed.schedule) ? parsed.schedule.slice(0, 3) : [],
-      motivation: parsed.motivation ?? 'Stay consistent tonight.',
-    };
-  } catch {
-    return buildLocalPlan(input);
   }
-}
 
+  return { ...buildLocalPlan(input), fallbackReason: lastError };
+}

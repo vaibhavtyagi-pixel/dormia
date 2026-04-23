@@ -231,7 +231,7 @@ function ImprovePage() {
           <div>
             <h2 className="font-sora text-xl font-bold text-ink">AI Night Plan</h2>
             <p className="text-sm text-text-secondary">
-              Generate tonight's personalized plan. Works now with local fallback and upgrades to Gemini when `VITE_GEMINI_API_KEY` is set.
+              Your plan is generated with Google Gemini when your API key is configured in the project (local or Vercel). Otherwise you will see a simple offline version.
             </p>
           </div>
           <button
@@ -246,29 +246,43 @@ function ImprovePage() {
 
         {coachPlan ? (
           <div className="mt-4 space-y-3">
-            <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink">
+            <p className="text-sm text-ink">
               <span className="font-semibold">Objective:</span> {coachPlan.objective}
             </p>
-            <div className="grid gap-2 md:grid-cols-2">
-              {coachPlan.actions.map((action) => (
-                <p key={action} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-secondary">
-                  {action}
-                </p>
+
+            <div className="space-y-1.5 text-sm text-text-secondary">
+              {coachPlan.schedule.map((step, index) => (
+                <div key={step} className="grid grid-cols-[100px_1fr] gap-3 border-b border-border/70 pb-2">
+                  <span className="font-mono text-indigo-light">
+                    {index === 0 ? 'Afternoon' : index === 1 ? 'Evening' : 'Pre-bed'}
+                  </span>
+                  <span>{step}</span>
+                </div>
               ))}
             </div>
-            {Array.isArray(coachPlan.schedule) && coachPlan.schedule.length > 0 ? (
-              <div className="grid gap-2 md:grid-cols-3">
-                {coachPlan.schedule.map((step) => (
-                  <p key={step} className="rounded-lg border border-border bg-indigo-pale/50 px-3 py-2 text-sm text-ink">
-                    {step}
-                  </p>
-                ))}
-              </div>
-            ) : null}
+
+            <div className="space-y-1.5 text-sm text-text-secondary">
+              {coachPlan.actions.map((action, index) => (
+                <div key={action} className="grid grid-cols-[100px_1fr] gap-3 border-b border-border/70 pb-2">
+                  <span className="font-mono text-indigo-light">Action {index + 1}</span>
+                  <span>{action}</span>
+                </div>
+              ))}
+            </div>
+
             <p className="text-sm italic text-text-secondary">{coachPlan.motivation}</p>
             <p className="text-xs text-indigo-light">
-              Source: {coachPlan.source === 'gemini' ? 'Gemini API' : 'Local fallback'}
+              {coachPlan.source === 'gemini' ? (
+                <>Source: Google Gemini{coachPlan.model ? ` · ${coachPlan.model}` : ''}</>
+              ) : (
+                <>Source: Offline (add Gemini API key to enable AI)</>
+              )}
             </p>
+            {coachPlan.source !== 'gemini' && import.meta.env.DEV && coachPlan.fallbackReason ? (
+              <p className="text-[11px] text-amber" title="Check VITE_GEMINI_API_KEY and Google AI Studio billing">
+                Dev: {coachPlan.fallbackReason}
+              </p>
+            ) : null}
           </div>
         ) : null}
       </article>
