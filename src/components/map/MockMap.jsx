@@ -6,7 +6,7 @@ import countries110m from 'world-atlas/countries-110m.json';
 const MAP_WIDTH = 1000;
 const MAP_HEIGHT = 500;
 const MIN_ZOOM = 1;
-const MAX_ZOOM = 3.2;
+const MAX_ZOOM = 12;
 
 function clusterPlayers(players) {
   const clusters = new Map();
@@ -72,7 +72,11 @@ function MockMap({ players, className = '' }) {
   }, [clusters]);
 
   const applyZoom = useCallback((nextZoom) => {
-    setZoom(Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom)));
+    setZoom(() => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, nextZoom)));
+  }, []);
+
+  const adjustZoom = useCallback((delta) => {
+    setZoom((currentZoom) => Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom + delta)));
   }, []);
 
   const getPanBounds = useCallback((activeZoom) => {
@@ -98,10 +102,11 @@ function MockMap({ players, className = '' }) {
   const handleWheelZoom = useCallback(
     (event) => {
       event.preventDefault();
-      const direction = event.deltaY < 0 ? 1 : -1;
-      applyZoom(zoom + direction * 0.16);
+      const sensitivity = event.ctrlKey ? 0.012 : 0.0035;
+      const delta = -event.deltaY * sensitivity;
+      adjustZoom(delta);
     },
-    [applyZoom, zoom]
+    [adjustZoom]
   );
 
   useEffect(() => {
@@ -139,6 +144,22 @@ function MockMap({ players, className = '' }) {
     dragRef.current = null;
   }, []);
 
+  const handleKeyZoom = useCallback(
+    (event) => {
+      if (event.key === 'ArrowUp' || event.key === '+' || event.key === '=') {
+        event.preventDefault();
+        adjustZoom(0.2);
+      } else if (event.key === 'ArrowDown' || event.key === '-') {
+        event.preventDefault();
+        adjustZoom(-0.2);
+      } else if (event.key === '0') {
+        event.preventDefault();
+        applyZoom(1);
+      }
+    },
+    [adjustZoom, applyZoom]
+  );
+
   return (
     <div
       ref={containerRef}
@@ -148,6 +169,8 @@ function MockMap({ players, className = '' }) {
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
       onPointerLeave={handlePointerUp}
+      onKeyDown={handleKeyZoom}
+      tabIndex={0}
       style={{
         backgroundImage:
           'linear-gradient(to bottom, rgba(255,255,255,0.66), rgba(233,237,245,0.75)), radial-gradient(rgba(157,167,186,0.2) 1px, transparent 1px)',
@@ -209,7 +232,7 @@ function MockMap({ players, className = '' }) {
         <button
           type="button"
           className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
-          onClick={() => applyZoom(zoom - 0.2)}
+          onClick={() => adjustZoom(-0.25)}
           aria-label="Zoom out map"
         >
           -
@@ -225,7 +248,7 @@ function MockMap({ players, className = '' }) {
         <button
           type="button"
           className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
-          onClick={() => applyZoom(zoom + 0.2)}
+          onClick={() => adjustZoom(0.25)}
           aria-label="Zoom in map"
         >
           +
