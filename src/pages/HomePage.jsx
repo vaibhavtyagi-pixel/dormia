@@ -84,7 +84,7 @@ function HomePage() {
   }, [winnersTimeline, activeLeague]);
 
   useEffect(() => {
-    if (!currentUser) return undefined;
+    if (!db || !currentUser) return undefined;
 
     const membershipRef = doc(db, 'league_memberships', currentUser.uid);
     const unsubscribeMembership = onSnapshot(membershipRef, async (snapshot) => {
@@ -163,6 +163,10 @@ function HomePage() {
   }, [awakeCount, sleepingCount, safePlayerData.currentStreak]);
 
   useEffect(() => {
+    if (!rtdb) {
+      setMapPlayers([]);
+      return undefined;
+    }
     const playersRef = ref(rtdb, 'dormia/players');
     const unsubscribe = onValue(
       playersRef,

@@ -15,6 +15,7 @@ function SignInPage() {
   }, [currentUser, navigate]);
 
   const handleSignIn = async () => {
+    if (!auth) return;
     const provider = new GoogleAuthProvider();
     await signInWithPopup(auth, provider);
     navigate('/', { replace: true });
@@ -28,10 +29,16 @@ function SignInPage() {
         <button
           type="button"
           onClick={handleSignIn}
+          disabled={!auth}
           className="mt-8 rounded-full bg-indigo px-8 py-3.5 font-sora text-base font-semibold text-white"
         >
-          Sign in with Google
+          {auth ? 'Sign in with Google' : 'Firebase not configured'}
         </button>
+        {!auth ? (
+          <p className="mt-3 text-xs text-text-secondary">
+            Configure `VITE_FIREBASE_*` variables in Vercel to enable sign in.
+          </p>
+        ) : null}
       </div>
     </main>
   );
