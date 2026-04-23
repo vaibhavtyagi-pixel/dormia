@@ -24,52 +24,67 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
+    const loadingTimeout = window.setTimeout(() => {
       setIsLoading(false);
+    }, 5000);
 
-      if (!user) {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        setCurrentUser(user);
+        setIsLoading(false);
+
+        if (!user) {
+          setPlayerData(null);
+          return;
+        }
+
+        const playerRef = doc(db, 'players', user.uid);
+        const playerSnap = await getDoc(playerRef);
+
+        if (!playerSnap.exists()) {
+          await setDoc(playerRef, {
+            displayName: user.displayName ?? 'Player',
+            email: user.email ?? '',
+            xp: 0,
+            credits: 0,
+            currentStreak: 0,
+            longestStreak: 0,
+            isAsleep: false,
+            sleepTargetHours: 7,
+            continent: 'Europe',
+            createdAt: serverTimestamp(),
+          });
+
+          await set(ref(rtdb, `dormia/players/${user.uid}`), {
+            isAsleep: false,
+            displayName: user.displayName ?? 'Player',
+            continent: 'Europe',
+            lat: 40.4168,
+            lng: -3.7038,
+          });
+        } else {
+          const existing = playerSnap.data();
+          await set(ref(rtdb, `dormia/players/${user.uid}`), {
+            isAsleep: existing.isAsleep ?? false,
+            displayName: existing.displayName ?? user.displayName ?? 'Player',
+            continent: existing.continent ?? 'Europe',
+            lat: existing.lat ?? 40.4168,
+            lng: -3.7038,
+          });
+        }
+      },
+      () => {
+        setCurrentUser(null);
         setPlayerData(null);
-        return;
+        setIsLoading(false);
       }
+    );
 
-      const playerRef = doc(db, 'players', user.uid);
-      const playerSnap = await getDoc(playerRef);
-
-      if (!playerSnap.exists()) {
-        await setDoc(playerRef, {
-          displayName: user.displayName ?? 'Player',
-          email: user.email ?? '',
-          xp: 0,
-          credits: 0,
-          currentStreak: 0,
-          longestStreak: 0,
-          isAsleep: false,
-          sleepTargetHours: 7,
-          continent: 'Europe',
-          createdAt: serverTimestamp(),
-        });
-
-        await set(ref(rtdb, `dormia/players/${user.uid}`), {
-          isAsleep: false,
-          displayName: user.displayName ?? 'Player',
-          continent: 'Europe',
-          lat: 40.4168,
-          lng: -3.7038,
-        });
-      } else {
-        const existing = playerSnap.data();
-        await set(ref(rtdb, `dormia/players/${user.uid}`), {
-          isAsleep: existing.isAsleep ?? false,
-          displayName: existing.displayName ?? user.displayName ?? 'Player',
-          continent: existing.continent ?? 'Europe',
-          lat: existing.lat ?? 40.4168,
-          lng: existing.lng ?? -3.7038,
-        });
-      }
-    });
-
-    return () => unsubscribe();
+    return () => {
+      window.clearTimeout(loadingTimeout);
+      unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
