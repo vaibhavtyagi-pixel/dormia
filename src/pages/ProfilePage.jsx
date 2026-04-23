@@ -1,27 +1,29 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { mockWinners } from '../mockWinners.js';
+import { mockCurrentUser } from '../mockData.js';
 
 const continents = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 
 function ProfilePage() {
-  const { playerData, settings, saveSettings, players } = useAuth();
+  const { playerData, settings, saveSettings, players, isLoading } = useAuth();
+  const safePlayerData = playerData ?? mockCurrentUser;
   const [sleepTarget, setSleepTarget] = useState(settings.sleepTarget);
   const [continent, setContinent] = useState(settings.continent);
   const [showToast, setShowToast] = useState(false);
-  const ranking = [...players].sort((a, b) => b.xp - a.xp).findIndex((player) => player.uid === playerData.uid) + 1;
-  const nextMilestone = Math.ceil(playerData.xp / 500) * 500;
-  const milestoneProgress = nextMilestone > 0 ? (playerData.xp / nextMilestone) * 100 : 0;
+  const ranking = [...players].sort((a, b) => b.xp - a.xp).findIndex((player) => player.uid === safePlayerData.uid) + 1;
+  const nextMilestone = Math.ceil(safePlayerData.xp / 500) * 500;
+  const milestoneProgress = nextMilestone > 0 ? (safePlayerData.xp / nextMilestone) * 100 : 0;
   const rankTitle = (() => {
-    if (playerData.xp < 500) return 'Night Owl 🦉';
-    if (playerData.xp < 1000) return 'Early Riser 🌅';
-    if (playerData.xp < 2000) return 'Dream Chaser 💫';
-    if (playerData.xp < 5000) return 'Sleep Athlete 🏃';
+    if (safePlayerData.xp < 500) return 'Night Owl 🦉';
+    if (safePlayerData.xp < 1000) return 'Early Riser 🌅';
+    if (safePlayerData.xp < 2000) return 'Dream Chaser 💫';
+    if (safePlayerData.xp < 5000) return 'Sleep Athlete 🏃';
     return 'Slumber Legend 👑';
   })();
   const winStats = mockWinners.reduce(
     (accumulator, entry) => {
-      if (entry.winnerUid === playerData.uid) {
+      if (entry.winnerUid === safePlayerData.uid) {
         accumulator.total += 1;
         accumulator.byLeague[entry.league] = (accumulator.byLeague[entry.league] ?? 0) + 1;
       }
@@ -29,6 +31,15 @@ function ProfilePage() {
     },
     { total: 0, byLeague: {} }
   );
+
+  useEffect(() => {
+    setSleepTarget(settings.sleepTarget);
+    setContinent(settings.continent);
+  }, [settings.sleepTarget, settings.continent]);
+
+  if (isLoading && !playerData) {
+    return <section className="animate-fade-up min-h-[40vh]" />;
+  }
 
   const handleSave = (event) => {
     event.preventDefault();
@@ -47,11 +58,11 @@ function ProfilePage() {
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-4">
                 <span className="flex h-14 w-14 items-center justify-center rounded-full bg-indigo font-mono text-xl text-white">
-                  {playerData.displayName.charAt(0)}
+                  {safePlayerData.displayName.charAt(0)}
                 </span>
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <h2 className="font-sora text-2xl font-bold text-ink">{playerData.displayName}</h2>
+                    <h2 className="font-sora text-2xl font-bold text-ink">{safePlayerData.displayName}</h2>
                     <span className="rounded-full bg-indigo-pale px-2 py-1 text-xs font-medium text-indigo-light">
                       {rankTitle}
                     </span>
@@ -60,37 +71,37 @@ function ProfilePage() {
                     <span className="rounded-full bg-indigo px-2 py-1 text-xs text-white">Rank #{ranking}</span>
                     <span
                       className={`rounded-full px-3 py-1 text-sm font-medium ${
-                        playerData.isAsleep ? 'bg-mint-pale text-mint' : 'bg-amber-pale text-amber'
+                        safePlayerData.isAsleep ? 'bg-mint-pale text-mint' : 'bg-amber-pale text-amber'
                       }`}
                     >
-                      {playerData.isAsleep ? '😴 Sleeping' : '☀️ Awake right now'}
+                      {safePlayerData.isAsleep ? '😴 Sleeping' : '☀️ Awake right now'}
                     </span>
                   </div>
                 </div>
               </div>
-              <p className="font-mono text-4xl font-medium text-indigo-light">{playerData.xp.toLocaleString()} XP</p>
+              <p className="font-mono text-4xl font-medium text-indigo-light">{safePlayerData.xp.toLocaleString()} XP</p>
             </div>
           </article>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <article className="card card-hover relative p-5">
               <span className="absolute right-3 top-3">⚡</span>
-              <p className="font-mono text-3xl text-ink">{playerData.xp.toLocaleString()}</p>
+              <p className="font-mono text-3xl text-ink">{safePlayerData.xp.toLocaleString()}</p>
               <p className="text-sm text-text-secondary">Total XP</p>
             </article>
             <article className="card card-hover relative p-5">
               <span className="absolute right-3 top-3">🔥</span>
-              <p className="font-mono text-3xl text-ink">{playerData.currentStreak}</p>
+              <p className="font-mono text-3xl text-ink">{safePlayerData.currentStreak}</p>
               <p className="text-sm text-text-secondary">Current Streak</p>
             </article>
             <article className="card card-hover relative p-5">
               <span className="absolute right-3 top-3">💎</span>
-              <p className="font-mono text-3xl text-ink">{playerData.credits}</p>
+              <p className="font-mono text-3xl text-ink">{safePlayerData.credits}</p>
               <p className="text-sm text-text-secondary">Credits</p>
             </article>
             <article className="card card-hover relative p-5">
               <span className="absolute right-3 top-3">🏅</span>
-              <p className="font-mono text-3xl text-ink">{playerData.longestStreak}</p>
+              <p className="font-mono text-3xl text-ink">{safePlayerData.longestStreak}</p>
               <p className="text-sm text-text-secondary">Longest Streak</p>
             </article>
           </div>
@@ -98,7 +109,7 @@ function ProfilePage() {
           <article className="card card-hover p-5">
             <p className="font-sora text-lg font-semibold text-ink">XP Progress</p>
             <p className="mt-1 font-mono text-sm text-text-secondary">
-              {playerData.xp.toLocaleString()} / {nextMilestone.toLocaleString()} XP to next rank
+              {safePlayerData.xp.toLocaleString()} / {nextMilestone.toLocaleString()} XP to next rank
             </p>
             <div className="mt-3 h-2 rounded-full bg-mint-pale">
               <div
@@ -177,7 +188,7 @@ function ProfilePage() {
 
       {showToast ? (
         <div className="card fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-4 py-3 text-sm text-indigo">
-          Settings saved (Firebase connects later)
+          Settings saved successfully
         </div>
       ) : null}
     </section>

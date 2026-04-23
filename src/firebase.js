@@ -13,6 +13,10 @@ const firebaseConfig = {
   databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
 };
 
+if (!import.meta.env.VITE_FIREBASE_API_KEY) {
+  console.warn('Missing VITE_FIREBASE_* env vars. Configure them in local .env and Vercel.');
+}
+
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

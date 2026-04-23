@@ -3,6 +3,7 @@ import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestor
 import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
 import { mockPlayers } from '../mockData.js';
+import { getLeaguePlayers, leagueConfigs } from '../utils/leagueScopes.js';
 
 const continentEmoji = {
   Europe: '🇪🇺',
@@ -14,29 +15,8 @@ const continentEmoji = {
 
 const avatarThemes = [{ bg: 'bg-indigo-pale' }, { bg: 'bg-mint-pale' }, { bg: 'bg-amber-pale' }];
 
-const leagueFilters = [
-  { key: 'myLeague', label: 'My League' },
-  { key: 'city', label: 'City' },
-  { key: 'country', label: 'Country' },
-  { key: 'continent', label: 'Continent' },
-  { key: 'world', label: 'World' },
-];
-
-function getMyLeaguePlayers(players, currentUser) {
-  const xpBand = 700;
-  return players.filter((player) => Math.abs(player.xp - currentUser.xp) <= xpBand);
-}
-
-function getLeaguePlayers(key, players, currentUser) {
-  if (key === 'myLeague') return getMyLeaguePlayers(players, currentUser);
-  if (key === 'city') return players.filter((player) => player.city === currentUser.city);
-  if (key === 'country') return players.filter((player) => player.country === currentUser.country);
-  if (key === 'continent') return players.filter((player) => player.continent === currentUser.continent);
-  return players;
-}
-
 function LeaderboardPage() {
-  const { currentUser, players } = useAuth();
+  const { currentUser, players, membershipByUid } = useAuth();
   const [activeLeague, setActiveLeague] = useState('world');
   const [livePlayers, setLivePlayers] = useState([]);
 
@@ -70,12 +50,12 @@ function LeaderboardPage() {
 
   const leaderboard = useMemo(
     () =>
-      [...getLeaguePlayers(activeLeague, sourcePlayers, currentUser ?? mockPlayers[1])].sort((a, b) => {
+      [...getLeaguePlayers(activeLeague, sourcePlayers, currentUser ?? mockPlayers[1], membershipByUid)].sort((a, b) => {
         if (b.xp !== a.xp) return b.xp - a.xp;
         if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
         return b.longestStreak - a.longestStreak;
       }),
-    [sourcePlayers, activeLeague, currentUser]
+    [sourcePlayers, activeLeague, currentUser, membershipByUid]
   );
 
   return (
@@ -96,7 +76,7 @@ function LeaderboardPage() {
       <h2 className="font-sora text-4xl font-extrabold tracking-tight text-indigo">LEADERBOARD</h2>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {leagueFilters.map((filter) => (
+        {leagueConfigs.map((filter) => (
           <button
             key={filter.key}
             type="button"

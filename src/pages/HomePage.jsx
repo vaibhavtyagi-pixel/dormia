@@ -1,6 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import {
+  collection,
+  doc,
+  getDocs,
+  limit,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
+  setDoc,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
 import { onValue, ref, update } from 'firebase/database';
 import LeagueResultsPanel from '../components/league/LeagueResultsPanel.jsx';
 import MockMap from '../components/map/MockMap.jsx';
@@ -10,18 +22,30 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { mockWinners } from '../mockWinners.js';
 import { db, rtdb } from '../firebase.js';
 import { mockPlayers } from '../mockData.js';
+import { normalizeLeagueKey } from '../utils/leagueScopes.js';
 
 function HomePage() {
   const location = useLocation();
-  const { currentUser, playerData, players, settings, setCurrentUserSleepState } = useAuth();
+  const {
+    currentUser,
+    playerData,
+    players,
+    settings,
+    setCurrentUserSleepState,
+    membershipByUid,
+    currentLeagueId,
+  } = useAuth();
   const [showLastAwake, setShowLastAwake] = useState(false);
   const [showObituaryToast, setShowObituaryToast] = useState(false);
   const [activeLeague, setActiveLeague] = useState('myLeague');
-  const [leagueName, setLeagueName] = useState('Night Owls');
-  const [leagueCode, setLeagueCode] = useState('DOR-8291');
+  const [leagueName, setLeagueName] = useState('No league yet');
+  const [leagueCode, setLeagueCode] = useState('----');
   const [joinCode, setJoinCode] = useState('');
   const [leagueMessage, setLeagueMessage] = useState('');
   const [mapPlayers, setMapPlayers] = useState([]);
+  const [winnersData, setWinnersData] = useState(mockWinners);
+  const [dailyRewardData, setDailyRewardData] = useState(null);
+  const [activeQuest, setActiveQuest] = useState(null);
 
   const safePlayerData = playerData ?? {
     uid: currentUser?.uid ?? 'fallback',
@@ -46,20 +70,80 @@ function HomePage() {
 
   const winnersTimeline = useMemo(() => {
     const playerByUid = new Map(sourcePlayers.map((player) => [player.uid, player]));
-    return [...mockWinners]
+    return [...winnersData]
       .sort((a, b) => new Date(b.date) - new Date(a.date))
       .slice(0, 8)
       .map((entry) => ({
         ...entry,
         winnerName: playerByUid.get(entry.winnerUid)?.displayName ?? 'Unknown player',
       }));
-  }, [sourcePlayers]);
+  }, [sourcePlayers, winnersData]);
 
   const filteredWinnersTimeline = useMemo(() => {
-    const mapLeagueName = (value) => value.toLowerCase().replace(/\s+/g, '');
-    const selected = activeLeague === 'myLeague' ? 'myleague' : activeLeague.toLowerCase();
-    return winnersTimeline.filter((entry) => mapLeagueName(entry.league) === selected);
+    return winnersTimeline.filter((entry) => normalizeLeagueKey(entry.league) === activeLeague);
   }, [winnersTimeline, activeLeague]);
+
+  useEffect(() => {
+    if (!currentUser) return undefined;
+
+    const membershipRef = doc(db, 'league_memberships', currentUser.uid);
+    const unsubscribeMembership = onSnapshot(membershipRef, async (snapshot) => {
+      if (!snapshot.exists()) {
+        setLeagueName('No league yet');
+        setLeagueCode('----');
+        return;
+      }
+      const membership = snapshot.data();
+      const leagueSnap = await getDocs(
+        query(collection(db, 'leagues'), where('leagueId', '==', membership.leagueId), limit(1))
+      );
+      if (leagueSnap.empty) {
+        setLeagueName('Unknown league');
+        setLeagueCode(membership.leagueId ?? '----');
+        return;
+      }
+      const league = leagueSnap.docs[0].data();
+      setLeagueName(league.name ?? 'Private League');
+      setLeagueCode(league.inviteCode ?? '----');
+    });
+
+    const winnersUnsubscribe = onSnapshot(
+      query(collection(db, 'league_results'), orderBy('date', 'desc'), limit(30)),
+      (snapshot) => {
+        if (snapshot.empty) {
+          setWinnersData(mockWinners);
+          return;
+        }
+        const rows = snapshot.docs.map((item) => ({
+          id: item.id,
+          ...item.data(),
+          league: item.data().leagueScope ?? item.data().league ?? 'World',
+        }));
+        setWinnersData(rows);
+      },
+      () => setWinnersData(mockWinners)
+    );
+
+    const rewardUnsubscribe = onSnapshot(doc(db, 'daily_rewards', currentUser.uid), (snapshot) => {
+      setDailyRewardData(snapshot.exists() ? snapshot.data() : null);
+    });
+
+    const questUnsubscribe = onSnapshot(collection(db, `quests/${currentUser.uid}/active`), (snapshot) => {
+      if (snapshot.empty) {
+        setActiveQuest(null);
+        return;
+      }
+      const first = snapshot.docs[0];
+      setActiveQuest({ id: first.id, ...first.data() });
+    });
+
+    return () => {
+      unsubscribeMembership();
+      winnersUnsubscribe();
+      rewardUnsubscribe();
+      questUnsubscribe();
+    };
+  }, [currentUser]);
 
   useEffect(() => {
     const duration = 800;
@@ -106,23 +190,83 @@ function HomePage() {
     return () => unsubscribe();
   }, [sourcePlayers]);
 
-  const handleCreateLeague = () => {
+  const handleCreateLeague = async () => {
+    if (!currentUser) return;
     const newCode = `DOR-${Math.floor(1000 + Math.random() * 9000)}`;
+    const leagueRef = doc(collection(db, 'leagues'));
+    const newLeagueId = leagueRef.id;
+    await setDoc(
+      leagueRef,
+      {
+        leagueId: newLeagueId,
+        name: `League ${newCode.slice(-4)}`,
+        inviteCode: newCode,
+        ownerUid: currentUser.uid,
+        scope: 'private',
+        isActive: true,
+        createdAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await setDoc(
+      doc(db, 'league_memberships', currentUser.uid),
+      {
+        uid: currentUser.uid,
+        leagueId: newLeagueId,
+        role: 'owner',
+        joinedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await setDoc(
+      doc(db, `leagues/${newLeagueId}/members`, currentUser.uid),
+      {
+        uid: currentUser.uid,
+        joinedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
     setLeagueCode(newCode);
     setLeagueName(`League ${newCode.slice(-4)}`);
-    setLeagueMessage(`League created. Share code ${newCode} to invite others.`);
+    setLeagueMessage(`League created in Firebase. Share code ${newCode} to invite others.`);
     setActiveLeague('myLeague');
   };
 
-  const handleJoinLeague = () => {
+  const handleJoinLeague = async () => {
+    if (!currentUser) return;
     const normalized = joinCode.trim().toUpperCase();
     if (!normalized) {
       setLeagueMessage('Please enter a valid league code.');
       return;
     }
+    const leaguesSnap = await getDocs(query(collection(db, 'leagues'), where('inviteCode', '==', normalized), limit(1)));
+    if (leaguesSnap.empty) {
+      setLeagueMessage(`Code ${normalized} not found.`);
+      return;
+    }
+    const leagueDoc = leaguesSnap.docs[0];
+    const league = leagueDoc.data();
+    await setDoc(
+      doc(db, 'league_memberships', currentUser.uid),
+      {
+        uid: currentUser.uid,
+        leagueId: league.leagueId ?? leagueDoc.id,
+        role: 'member',
+        joinedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
+    await setDoc(
+      doc(db, `leagues/${league.leagueId ?? leagueDoc.id}/members`, currentUser.uid),
+      {
+        uid: currentUser.uid,
+        joinedAt: serverTimestamp(),
+      },
+      { merge: true }
+    );
     setLeagueCode(normalized);
-    setLeagueName(`Joined ${normalized}`);
-    setLeagueMessage(`You joined league ${normalized}.`);
+    setLeagueName(league.name ?? `Joined ${normalized}`);
+    setLeagueMessage(`You joined ${league.name ?? normalized} from Firebase.`);
     setActiveLeague('myLeague');
     setJoinCode('');
   };
@@ -131,6 +275,12 @@ function HomePage() {
     activeLeague === 'myLeague'
       ? `${leagueName} (${leagueCode})`
       : activeLeague.charAt(0).toUpperCase() + activeLeague.slice(1);
+  const currentLeagueMemberCount = currentLeagueId
+    ? Object.values(membershipByUid).filter((membership) => membership.leagueId === currentLeagueId).length
+    : 1;
+  const myLeagueWins = winnersTimeline.filter(
+    (entry) => entry.winnerUid === safePlayerData.uid && normalizeLeagueKey(entry.league) === 'myLeague'
+  ).length;
 
   const handleSleep = async () => {
     const awakeInContinent = sourcePlayers.filter(
@@ -251,6 +401,9 @@ function HomePage() {
             Your code: <span className="font-mono text-ink">{leagueCode}</span>
           </span>
           {leagueMessage ? <span>{leagueMessage}</span> : null}
+          <span className="rounded-full border border-border bg-card px-2 py-1">
+            Members in my league: <span className="font-mono text-ink">{currentLeagueMemberCount}</span>
+          </span>
         </div>
       </section>
 
@@ -260,8 +413,30 @@ function HomePage() {
           currentUser={safePlayerData}
           activeLeague={activeLeague}
           onLeagueChange={setActiveLeague}
+          membershipByUid={membershipByUid}
+          winners={winnersData}
         />
       </div>
+
+      <section className="card card-hover mt-6 grid gap-3 p-5 md:grid-cols-3">
+        <article className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-text-secondary">My wins</p>
+          <p className="mt-1 font-mono text-3xl text-ink">{myLeagueWins}</p>
+          <p className="text-xs text-text-secondary">wins in my league</p>
+        </article>
+        <article className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-text-secondary">Daily reward</p>
+          <p className="mt-1 font-mono text-3xl text-ink">{dailyRewardData?.streakDay ?? 0}</p>
+          <p className="text-xs text-text-secondary">current reward cycle day</p>
+        </article>
+        <article className="rounded-xl border border-border bg-card p-3">
+          <p className="text-xs uppercase tracking-[0.14em] text-text-secondary">Active quest</p>
+          <p className="mt-1 text-sm font-semibold text-ink">{activeQuest?.title ?? 'No active quest yet'}</p>
+          <p className="text-xs text-text-secondary">
+            {activeQuest ? `${activeQuest.progress ?? 0}/${activeQuest.goal ?? 0} progress` : 'Create one from Firebase to start.'}
+          </p>
+        </article>
+      </section>
 
       <section className="card card-hover mt-6 p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">

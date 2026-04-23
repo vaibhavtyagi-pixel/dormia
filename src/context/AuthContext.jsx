@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [playerData, setPlayerData] = useState(null);
   const [players, setPlayers] = useState(mockPlayers);
+  const [membershipByUid, setMembershipByUid] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -104,6 +105,22 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, 'league_memberships'), (snapshot) => {
+      if (snapshot.empty) {
+        setMembershipByUid({});
+        return;
+      }
+      const next = {};
+      snapshot.forEach((item) => {
+        next[item.id] = item.data();
+      });
+      setMembershipByUid(next);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   const setCurrentUserSleepState = async (isAsleep) => {
     if (!currentUser) {
       return;
@@ -141,6 +158,8 @@ export function AuthProvider({ children }) {
     currentUser,
     playerData,
     players,
+    membershipByUid,
+    currentLeagueId: currentUser ? membershipByUid[currentUser.uid]?.leagueId ?? null : null,
     settings,
     isLoading,
     setCurrentUserSleepState,

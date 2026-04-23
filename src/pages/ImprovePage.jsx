@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { mockCurrentUser, mockPlayers } from '../mockData.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { generateCoachPlan } from '../services/improveCoach.js';
 
 const tips = [
   {
@@ -48,6 +49,9 @@ function ImprovePage() {
   const currentUser = playerData ?? mockCurrentUser;
   const sleepTargetHours = settings?.sleepTarget ?? 7;
   const [showMoreTips, setShowMoreTips] = useState(false);
+  const [coachPlan, setCoachPlan] = useState(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
 
   const sorted = useMemo(
     () =>
@@ -126,6 +130,29 @@ function ImprovePage() {
 
   const visibleTips = showMoreTips ? tips : tips.slice(0, 3);
 
+  const handleGeneratePlan = async () => {
+    setIsGeneratingPlan(true);
+    const plan = await generateCoachPlan({
+      streak: currentUser.currentStreak,
+      sleepTargetHours,
+      gapXp,
+      nightsToClose,
+    });
+    setCoachPlan(plan);
+    setIsGeneratingPlan(false);
+  };
+
+  const handleReminder = () => {
+    const reminderTime = new Date();
+    reminderTime.setMinutes(reminderTime.getMinutes() + 30);
+    setReminderMessage(
+      `Reminder set for ${reminderTime.toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      })}.`
+    );
+  };
+
   return (
     <section className="animate-fade-up space-y-8">
       <header>
@@ -177,12 +204,54 @@ function ImprovePage() {
           <p className="mt-3 text-sm leading-relaxed text-white/90">{tonightFocus.message}</p>
           <button
             type="button"
+            onClick={handleReminder}
             className="mt-5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white"
           >
             {tonightFocus.cta}
           </button>
+          {reminderMessage ? (
+            <p className="mt-3 text-xs text-white/85">{reminderMessage}</p>
+          ) : null}
         </article>
       </div>
+
+      <article className="card card-hover animate-fade-up p-6" style={{ animationDelay: '125ms' }}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="font-sora text-xl font-bold text-ink">AI Night Plan</h2>
+            <p className="text-sm text-text-secondary">
+              Generate tonight's personalized plan. Works now with local fallback and upgrades to Gemini when `VITE_GEMINI_API_KEY` is set.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={handleGeneratePlan}
+            disabled={isGeneratingPlan}
+            className="rounded-full border border-border bg-indigo px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            {isGeneratingPlan ? 'Generating...' : 'Generate tonight plan'}
+          </button>
+        </div>
+
+        {coachPlan ? (
+          <div className="mt-4 space-y-3">
+            <p className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-ink">
+              <span className="font-semibold">Objective:</span> {coachPlan.objective}
+            </p>
+            <div className="grid gap-2 md:grid-cols-3">
+              {coachPlan.actions.map((action) => (
+                <p key={action} className="rounded-lg border border-border bg-card px-3 py-2 text-sm text-text-secondary">
+                  {action}
+                </p>
+              ))}
+            </div>
+            <p className="text-sm italic text-text-secondary">{coachPlan.motivation}</p>
+            <p className="text-xs text-indigo-light">
+              Source: {coachPlan.source === 'gemini' ? 'Gemini API' : 'Local fallback'}
+            </p>
+          </div>
+        ) : null}
+      </article>
 
       <article className="card card-hover animate-fade-up p-6" style={{ animationDelay: '150ms' }}>
         <h2 className="font-sora text-xl font-bold text-ink">Your Best Days</h2>

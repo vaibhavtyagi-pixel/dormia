@@ -1,13 +1,6 @@
 import { useMemo, useState } from 'react';
 import { mockWinners } from '../../mockWinners.js';
-
-const leagueConfigs = [
-  { key: 'myLeague', label: 'My League', description: 'Players with similar XP range' },
-  { key: 'city', label: 'City', description: 'Your city leaderboard' },
-  { key: 'country', label: 'Country', description: 'Your country leaderboard' },
-  { key: 'continent', label: 'Continent', description: 'Regional competition' },
-  { key: 'world', label: 'World', description: 'Global ranking' },
-];
+import { getLeaguePlayers, leagueConfigs, normalizeLeagueKey } from '../../utils/leagueScopes.js';
 
 function sortPlayers(players) {
   return [...players].sort((a, b) => {
@@ -17,51 +10,48 @@ function sortPlayers(players) {
   });
 }
 
-function getMyLeaguePlayers(players, currentUser) {
-  const xpBand = 700;
-  return players.filter((player) => Math.abs(player.xp - currentUser.xp) <= xpBand);
-}
-
-function getLeaguePlayers(key, players, currentUser) {
-  if (key === 'myLeague') return getMyLeaguePlayers(players, currentUser);
-  if (key === 'city') return players.filter((player) => player.city === currentUser.city);
-  if (key === 'country') return players.filter((player) => player.country === currentUser.country);
-  if (key === 'continent') return players.filter((player) => player.continent === currentUser.continent);
-  return players;
-}
-
-function LeagueResultsPanel({ players, currentUser, activeLeague: activeLeagueProp, onLeagueChange }) {
+function LeagueResultsPanel({
+  players,
+  currentUser,
+  activeLeague: activeLeagueProp,
+  onLeagueChange,
+  membershipByUid = {},
+  winners = mockWinners,
+}) {
   const [internalLeague, setInternalLeague] = useState('myLeague');
   const activeLeague = activeLeagueProp ?? internalLeague;
   const setActiveLeague = onLeagueChange ?? setInternalLeague;
 
   const standings = useMemo(() => {
-    const filtered = getLeaguePlayers(activeLeague, players, currentUser);
+    const filtered = getLeaguePlayers(activeLeague, players, currentUser, membershipByUid);
     return sortPlayers(filtered).slice(0, 3);
-  }, [activeLeague, players, currentUser]);
+  }, [activeLeague, players, currentUser, membershipByUid]);
   const latestWinnerDate = useMemo(
     () =>
-      [...mockWinners]
+      [...winners]
         .map((entry) => entry.date)
         .sort((a, b) => new Date(b) - new Date(a))[0],
-    []
+    [winners]
   );
   const winnersByUid = useMemo(
     () =>
-      mockWinners.reduce((accumulator, entry) => {
+      winners.reduce((accumulator, entry) => {
+        if (normalizeLeagueKey(entry.league) !== activeLeague) return accumulator;
         accumulator[entry.winnerUid] = (accumulator[entry.winnerUid] ?? 0) + 1;
         return accumulator;
       }, {}),
-    []
+    [winners, activeLeague]
   );
   const todayLeagueWinners = useMemo(
     () =>
       new Set(
-        mockWinners
-          .filter((entry) => entry.date === latestWinnerDate)
+        winners
+          .filter(
+            (entry) => entry.date === latestWinnerDate && normalizeLeagueKey(entry.league) === activeLeague
+          )
           .map((entry) => entry.winnerUid)
       ),
-    [latestWinnerDate]
+    [latestWinnerDate, winners, activeLeague]
   );
 
   return (
