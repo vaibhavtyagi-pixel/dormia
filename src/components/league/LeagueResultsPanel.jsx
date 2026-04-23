@@ -4,9 +4,15 @@ import { getLeaguePlayers, leagueConfigs, normalizeLeagueKey } from '../../utils
 
 function sortPlayers(players) {
   return [...players].sort((a, b) => {
-    if (b.xp !== a.xp) return b.xp - a.xp;
-    if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
-    return b.longestStreak - a.longestStreak;
+    const xpA = Number(a.xp) || 0;
+    const xpB = Number(b.xp) || 0;
+    const streakA = Number(a.currentStreak) || 0;
+    const streakB = Number(b.currentStreak) || 0;
+    const longestA = Number(a.longestStreak) || 0;
+    const longestB = Number(b.longestStreak) || 0;
+    if (xpB !== xpA) return xpB - xpA;
+    if (streakB !== streakA) return streakB - streakA;
+    return longestB - longestA;
   });
 }
 
@@ -124,7 +130,7 @@ function LeagueResultsPanel({
               </div>
 
               <div className="mt-4">
-                <p className="font-mono text-4xl text-ink">{player.xp.toLocaleString()}</p>
+                <p className="font-mono text-4xl text-ink">{(Number(player.xp) || 0).toLocaleString()}</p>
                 <p className="text-[10px] uppercase tracking-[0.18em] text-indigo-light">XP</p>
               </div>
 

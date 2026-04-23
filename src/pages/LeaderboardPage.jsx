@@ -127,7 +127,7 @@ function LeaderboardPage() {
                 </div>
 
                 <div>
-                  <p className="font-mono text-xl text-indigo">{player.xp.toLocaleString()}</p>
+                  <p className="font-mono text-xl text-indigo">{(Number(player.xp) || 0).toLocaleString()}</p>
                   <p className="text-xs uppercase tracking-[0.16em] text-indigo-light">XP</p>
                 </div>
 

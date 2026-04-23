@@ -13,13 +13,14 @@ function ProfilePage() {
   const [hasAndroidApk, setHasAndroidApk] = useState(settings.hasAndroidApk);
   const [showToast, setShowToast] = useState(false);
   const ranking = [...players].sort((a, b) => b.xp - a.xp).findIndex((player) => player.uid === safePlayerData.uid) + 1;
-  const nextMilestone = Math.ceil(safePlayerData.xp / 500) * 500;
-  const milestoneProgress = nextMilestone > 0 ? (safePlayerData.xp / nextMilestone) * 100 : 0;
+  const safeXp = Number(safePlayerData.xp) || 0;
+  const nextMilestone = Math.ceil(safeXp / 500) * 500;
+  const milestoneProgress = nextMilestone > 0 ? (safeXp / nextMilestone) * 100 : 0;
   const rankTitle = (() => {
-    if (safePlayerData.xp < 500) return 'Night Owl 🦉';
-    if (safePlayerData.xp < 1000) return 'Early Riser 🌅';
-    if (safePlayerData.xp < 2000) return 'Dream Chaser 💫';
-    if (safePlayerData.xp < 5000) return 'Sleep Athlete 🏃';
+    if (safeXp < 500) return 'Night Owl 🦉';
+    if (safeXp < 1000) return 'Early Riser 🌅';
+    if (safeXp < 2000) return 'Dream Chaser 💫';
+    if (safeXp < 5000) return 'Sleep Athlete 🏃';
     return 'Slumber Legend 👑';
   })();
   const winStats = mockWinners.reduce(
@@ -81,14 +82,14 @@ function ProfilePage() {
                   </div>
                 </div>
               </div>
-              <p className="font-mono text-4xl font-medium text-indigo-light">{safePlayerData.xp.toLocaleString()} XP</p>
+              <p className="font-mono text-4xl font-medium text-indigo-light">{safeXp.toLocaleString()} XP</p>
             </div>
           </article>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <article className="card card-hover relative p-5">
               <span className="absolute right-3 top-3">⚡</span>
-              <p className="font-mono text-3xl text-ink">{safePlayerData.xp.toLocaleString()}</p>
+              <p className="font-mono text-3xl text-ink">{safeXp.toLocaleString()}</p>
               <p className="text-sm text-text-secondary">Total XP</p>
             </article>
             <article className="card card-hover relative p-5">
@@ -111,7 +112,7 @@ function ProfilePage() {
           <article className="card card-hover p-5">
             <p className="font-sora text-lg font-semibold text-ink">XP Progress</p>
             <p className="mt-1 font-mono text-sm text-text-secondary">
-              {safePlayerData.xp.toLocaleString()} / {nextMilestone.toLocaleString()} XP to next rank
+              {safeXp.toLocaleString()} / {nextMilestone.toLocaleString()} XP to next rank
             </p>
             <div className="mt-3 h-2 rounded-full bg-mint-pale">
               <div

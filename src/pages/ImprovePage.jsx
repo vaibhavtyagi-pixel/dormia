@@ -63,8 +63,10 @@ function ImprovePage() {
     []
   );
   const top3Threshold = sorted[2]?.xp ?? currentUser.xp;
-  const gapXp = Math.max(0, top3Threshold - currentUser.xp);
-  const gapFill = top3Threshold > 0 ? Math.min(100, (currentUser.xp / top3Threshold) * 100) : 100;
+  const safeXp = Number(currentUser.xp) || 0;
+  const safeTop3Threshold = Number(top3Threshold) || 0;
+  const gapXp = Math.max(0, safeTop3Threshold - safeXp);
+  const gapFill = safeTop3Threshold > 0 ? Math.min(100, (safeXp / safeTop3Threshold) * 100) : 100;
   const nightsToClose = Math.max(1, Math.ceil(gapXp / 120));
   const targetXp = nightsToClose * 120;
 
@@ -173,8 +175,8 @@ function ImprovePage() {
         <article className="card card-hover animate-fade-up p-6" style={{ animationDelay: '50ms' }}>
           <h2 className="font-sora text-2xl font-bold text-ink">How far from Top 3?</h2>
           <div className="mt-4 flex items-center justify-between text-sm">
-            <span className="font-mono text-indigo">{currentUser.xp.toLocaleString()} XP</span>
-            <span className="font-mono text-amber">{top3Threshold.toLocaleString()} XP</span>
+            <span className="font-mono text-indigo">{safeXp.toLocaleString()} XP</span>
+            <span className="font-mono text-amber">{safeTop3Threshold.toLocaleString()} XP</span>
           </div>
           <div className="mt-2 h-2.5 rounded-full bg-amber-pale">
             <div
