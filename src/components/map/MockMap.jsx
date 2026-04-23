@@ -1,14 +1,10 @@
 import { useMemo } from 'react';
+import { geoGraticule10, geoNaturalEarth1, geoPath } from 'd3-geo';
+import { feature } from 'topojson-client';
+import countries110m from 'world-atlas/countries-110m.json';
 
-function toMapPosition(lat, lng) {
-  const clampedLat = Math.max(-60, Math.min(80, lat));
-  const left = ((lng + 180) / 360) * 100;
-  const top = 90 - ((clampedLat + 60) / 140) * 80;
-  return {
-    left: Math.max(3, Math.min(97, left)),
-    top: Math.max(12, Math.min(88, top)),
-  };
-}
+const MAP_WIDTH = 1000;
+const MAP_HEIGHT = 500;
 
 function clusterPlayers(players) {
   const clusters = new Map();
@@ -41,6 +37,32 @@ function MockMap({ players, className = '' }) {
   const clusters = useMemo(() => clusterPlayers(players), [players]);
   const asleepTotal = useMemo(() => players.filter((item) => item.isAsleep).length, [players]);
   const awakeTotal = players.length - asleepTotal;
+  const { countriesPath, graticulePath, positionedClusters } = useMemo(() => {
+    const world = feature(countries110m, countries110m.objects.countries);
+    const projection = geoNaturalEarth1().fitExtent(
+      [
+        [20, 20],
+        [MAP_WIDTH - 20, MAP_HEIGHT - 20],
+      ],
+      world
+    );
+    const path = geoPath(projection);
+    const countriesPathValue = path(world) ?? '';
+    const graticulePathValue = path(geoGraticule10()) ?? '';
+    const projectedClusters = clusters
+      .map((cluster) => {
+        const point = projection([cluster.lng, cluster.lat]);
+        if (!point) return null;
+        return { ...cluster, x: point[0], y: point[1] };
+      })
+      .filter(Boolean);
+
+    return {
+      countriesPath: countriesPathValue,
+      graticulePath: graticulePathValue,
+      positionedClusters: projectedClusters,
+    };
+  }, [clusters]);
 
   return (
     <div
@@ -51,26 +73,12 @@ function MockMap({ players, className = '' }) {
         backgroundSize: '100% 100%, 20px 20px',
       }}
     >
-      <svg className="absolute inset-0 h-full w-full opacity-100" viewBox="0 0 1000 500" preserveAspectRatio="none">
-        <rect x="0" y="0" width="1000" height="500" fill="rgba(231,235,243,0.7)" />
-        <g fill="none" stroke="rgba(173,183,198,0.35)" strokeWidth="1">
-          <path d="M0 120 H1000" />
-          <path d="M0 180 H1000" />
-          <path d="M0 240 H1000" />
-          <path d="M0 300 H1000" />
-          <path d="M0 360 H1000" />
-        </g>
-        <g fill="rgba(201,206,216,0.96)" stroke="rgba(223,227,235,0.9)" strokeWidth="1.1">
-          <path d="M66 120L98 95L142 88L190 96L230 118L254 142L272 165L304 176L314 206L290 236L242 264L192 274L154 266L118 246L84 220L62 192L50 160Z" />
-          <path d="M260 288L286 274L310 288L324 318L306 344L278 352L252 334Z" />
-          <path d="M420 94L450 82L498 84L540 100L578 96L618 110L650 132L638 152L600 170L570 188L556 220L530 248L496 270L466 290L438 286L412 264L396 236L382 204L364 184L356 154L374 126Z" />
-          <path d="M536 286L562 280L584 292L596 314L590 342L572 366L552 392L532 410L510 398L500 372L508 342L520 318Z" />
-          <path d="M620 112L662 92L720 82L774 90L814 106L842 134L866 160L896 184L910 206L902 228L874 242L840 246L818 264L792 282L754 296L722 286L690 270L670 246L658 220L640 196L628 172L614 150Z" />
-          <path d="M836 304L868 296L900 304L922 322L928 344L912 360L882 370L852 360L834 340Z" />
-        </g>
+      <svg className="absolute inset-0 h-full w-full opacity-100" viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`} preserveAspectRatio="none">
+        <rect x="0" y="0" width={MAP_WIDTH} height={MAP_HEIGHT} fill="rgba(231,235,243,0.7)" />
+        <path d={graticulePath} fill="none" stroke="rgba(173,183,198,0.35)" strokeWidth="1" />
+        <path d={countriesPath} fill="rgba(201,206,216,0.96)" stroke="rgba(223,227,235,0.9)" strokeWidth="0.9" />
       </svg>
-      {clusters.map((cluster) => {
-        const pos = toMapPosition(cluster.lat, cluster.lng);
+      {positionedClusters.map((cluster) => {
         const isMostlyAwake = cluster.awakeCount >= cluster.asleepCount;
         const bg = isMostlyAwake ? 'bg-amber' : 'bg-mint';
         const ring = isMostlyAwake ? 'rgba(251,191,36,0.35)' : 'rgba(110,231,183,0.35)';
@@ -80,8 +88,8 @@ function MockMap({ players, className = '' }) {
             key={cluster.key}
             className="group absolute"
             style={{
-              left: `${pos.left}%`,
-              top: `${pos.top}%`,
+              left: `${(cluster.x / MAP_WIDTH) * 100}%`,
+              top: `${(cluster.y / MAP_HEIGHT) * 100}%`,
               transform: 'translate(-50%, -50%)',
             }}
           >
