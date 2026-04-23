@@ -11,7 +11,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { ref, set, update } from 'firebase/database';
-import { auth, db, rtdb } from '../firebase.js';
+import { auth, db, hasFirebaseConfig, rtdb } from '../firebase.js';
 import { mockPlayers } from '../mockData.js';
 
 const AuthContext = createContext(null);
@@ -24,6 +24,14 @@ export function AuthProvider({ children }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    if (!hasFirebaseConfig || !auth || !db || !rtdb) {
+      setCurrentUser(null);
+      setPlayerData(null);
+      setPlayers(mockPlayers);
+      setIsLoading(false);
+      return undefined;
+    }
+
     const loadingTimeout = window.setTimeout(() => {
       setIsLoading(false);
     }, 5000);
@@ -88,6 +96,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!db) return undefined;
     if (!currentUser) {
       return undefined;
     }
@@ -100,6 +109,7 @@ export function AuthProvider({ children }) {
   }, [currentUser]);
 
   useEffect(() => {
+    if (!db) return undefined;
     const unsubscribe = onSnapshot(query(collection(db, 'players')), (snapshot) => {
       if (snapshot.empty) {
         setPlayers(mockPlayers);
@@ -121,6 +131,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   useEffect(() => {
+    if (!db) return undefined;
     const unsubscribe = onSnapshot(collection(db, 'league_memberships'), (snapshot) => {
       if (snapshot.empty) {
         setMembershipByUid({});
@@ -137,7 +148,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   const setCurrentUserSleepState = async (isAsleep) => {
-    if (!currentUser) {
+    if (!currentUser || !db || !rtdb) {
       return;
     }
     await updateDoc(doc(db, 'players', currentUser.uid), {
@@ -149,7 +160,7 @@ export function AuthProvider({ children }) {
   };
 
   const saveSettings = async ({ sleepTarget, continent }) => {
-    if (!currentUser) {
+    if (!currentUser || !db || !rtdb) {
       return;
     }
     await updateDoc(doc(db, 'players', currentUser.uid), {
