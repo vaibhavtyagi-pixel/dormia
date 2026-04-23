@@ -4,6 +4,7 @@ import {
   collection,
   doc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
@@ -46,6 +47,7 @@ function HomePage() {
   const [winnersData, setWinnersData] = useState(mockWinners);
   const [dailyRewardData, setDailyRewardData] = useState(null);
   const [activeQuest, setActiveQuest] = useState(null);
+  const [sleepRewardMessage, setSleepRewardMessage] = useState('');
 
   const safePlayerData = playerData ?? {
     uid: currentUser?.uid ?? 'fallback',
@@ -310,11 +312,46 @@ function HomePage() {
   const handleWakeUp = async () => {
     await setCurrentUserSleepState(false);
     if (currentUser?.uid) {
+      const toDate = (value) => {
+        if (!value) return null;
+        if (value instanceof Date) return value;
+        if (typeof value?.toDate === 'function') return value.toDate();
+        if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+        return null;
+      };
+      const now = new Date();
+      const lastSleepStart = toDate(safePlayerData.lastSleepStart);
+      const sleptHours =
+        lastSleepStart && Number.isFinite(lastSleepStart.getTime())
+          ? Math.max(0, (now.getTime() - lastSleepStart.getTime()) / (1000 * 60 * 60))
+          : settings.sleepTarget;
+      const targetHours = Math.max(5, Number(settings.sleepTarget) || 7);
+      const delta = sleptHours - targetHours;
+      const deviation = Math.abs(delta);
+
+      const baseXp = 25;
+      const qualityBonus = Math.max(0, Math.round(90 - deviation * 30));
+      const heavyPenalty = deviation >= 2.5 ? 35 : deviation >= 1.5 ? 15 : 0;
+      const earnedXp = Math.max(8, baseXp + qualityBonus - heavyPenalty);
+      const earnedCredits = Math.max(2, Math.round(earnedXp / 8));
+      const hitBand = deviation <= 1.25;
+      const streakDelta = hitBand ? 1 : safePlayerData.currentStreak > 0 ? -1 : 0;
+      const nextStreak = Math.max(0, safePlayerData.currentStreak + streakDelta);
+
       await updateDoc(doc(db, 'players', currentUser.uid), {
         isAsleep: false,
         lastSleepEnd: serverTimestamp(),
+        xp: increment(earnedXp),
+        credits: increment(earnedCredits),
+        currentStreak: nextStreak,
+        longestStreak: Math.max(safePlayerData.longestStreak ?? 0, nextStreak),
       });
       await update(ref(rtdb, `dormia/players/${currentUser.uid}`), { isAsleep: false });
+      const deltaLabel = delta >= 0 ? `+${delta.toFixed(1)}h` : `${delta.toFixed(1)}h`;
+      setSleepRewardMessage(
+        `+${earnedXp} XP, +${earnedCredits} coins (${sleptHours.toFixed(1)}h vs target ${targetHours}h, ${deltaLabel}).`
+      );
+      window.setTimeout(() => setSleepRewardMessage(''), 4200);
     }
 
     if (Math.random() < 0.3 && settings.sleepTarget > 0) {
@@ -546,6 +583,11 @@ function HomePage() {
         onDismiss={() => setShowLastAwake(false)}
       />
       <MockObituaryToast show={showObituaryToast} displayName={safePlayerData.displayName} />
+      {sleepRewardMessage ? (
+        <div className="card fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-4 py-3 text-sm text-indigo">
+          {sleepRewardMessage}
+        </div>
+      ) : null}
     </section>
   );
 }

@@ -154,7 +154,7 @@ function ProfilePage() {
               I want to sleep{' '}
               <input
                 type="number"
-                min="1"
+                min="5"
                 max="12"
                 value={sleepTarget}
                 onChange={(event) => setSleepTarget(event.target.value)}

@@ -164,8 +164,9 @@ export function AuthProvider({ children }) {
     if (!currentUser || !db || !rtdb) {
       return;
     }
+    const normalizedSleepTarget = Math.max(5, Number(sleepTarget) || 5);
     await updateDoc(doc(db, 'players', currentUser.uid), {
-      sleepTargetHours: sleepTarget,
+      sleepTargetHours: normalizedSleepTarget,
       continent,
       hasAndroidApk: Boolean(hasAndroidApk),
     });
