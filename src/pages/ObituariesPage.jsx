@@ -12,13 +12,6 @@ const continentEmoji = {
   Oceania: '🌊',
 };
 
-const causes = [
-  'a midnight doom-scroll',
-  'a Netflix autoplay spiral',
-  'an unnecessary group chat',
-  'a random rabbit hole video',
-];
-
 function ObituariesPage() {
   const { players } = useAuth();
   const [liveObituaries, setLiveObituaries] = useState([]);
@@ -93,7 +86,7 @@ function ObituariesPage() {
         {items.map((obituary, index) => {
           const matchingPlayer = (players ?? []).find((player) => player.displayName === obituary.displayName);
           const continent = matchingPlayer?.continent ?? 'World';
-          const cause = causes[index % causes.length];
+          const cause = obituary?.cause ?? obituary?.reason ?? 'a streak break event';
           const date = new Date(obituary.timeOfDeath);
           const formattedDate = date.toLocaleString('en-US', {
             month: 'long',
@@ -127,7 +120,9 @@ function ObituariesPage() {
               </div>
 
               <p className="mt-4 text-[13px] italic text-text-secondary">💤 Taken by {cause}</p>
-              <p className="mt-3 text-sm text-text-secondary">{obituary.obituaryText}</p>
+              <p className="mt-3 text-sm text-text-secondary">
+                {obituary.obituaryText ?? obituary.message ?? 'No additional details were recorded for this streak loss.'}
+              </p>
 
               <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
                 <p className="font-mono text-sm text-text-secondary">{formattedDate.replace(',', ' ·')}</p>
