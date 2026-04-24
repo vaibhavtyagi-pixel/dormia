@@ -1,4 +1,4 @@
-const GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const PREFERRED_GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
 
 function buildLocalPlan({ streak, sleepTargetHours, gapXp, nightsToClose }) {
   const riskLevel = streak === 0 ? 'high' : streak < 4 ? 'medium' : 'low';
@@ -48,6 +48,41 @@ async function callGeminiGenerateContent(apiKey, model, body) {
   return res;
 }
 
+async function listGeminiGenerateModels(apiKey) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(apiKey)}`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    return { models: [], error: `list_models_http_${res.status}` };
+  }
+  const data = await res.json();
+  const models = (data?.models ?? [])
+    .filter((item) => Array.isArray(item?.supportedGenerationMethods) && item.supportedGenerationMethods.includes('generateContent'))
+    .map((item) => String(item.name ?? '').replace(/^models\//, ''))
+    .filter(Boolean);
+  return { models, error: null };
+}
+
+function rankModels(availableModels) {
+  const seen = new Set();
+  const ranked = [];
+
+  for (const preferred of PREFERRED_GEMINI_MODELS) {
+    if (availableModels.includes(preferred) && !seen.has(preferred)) {
+      ranked.push(preferred);
+      seen.add(preferred);
+    }
+  }
+
+  for (const model of availableModels) {
+    if (!seen.has(model) && model.includes('gemini')) {
+      ranked.push(model);
+      seen.add(model);
+    }
+  }
+
+  return ranked;
+}
+
 export async function generateCoachPlan(input) {
   const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
   if (!apiKey) {
@@ -92,8 +127,13 @@ Constraints:
   };
 
   let lastError = 'unknown';
+  const { models: availableModels, error: listError } = await listGeminiGenerateModels(apiKey);
+  const modelsToTry = rankModels(availableModels);
+  if (!modelsToTry.length) {
+    return { ...buildLocalPlan(input), fallbackReason: listError ?? 'no_generate_models_available' };
+  }
 
-  for (const model of GEMINI_MODELS) {
+  for (const model of modelsToTry) {
     try {
       const response = await callGeminiGenerateContent(apiKey, model, requestBody);
       const raw = await response.text();
