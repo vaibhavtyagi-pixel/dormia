@@ -38,6 +38,7 @@ function clusterPlayers(players) {
 function MockMap({ players, className = '' }) {
   const containerRef = useRef(null);
   const dragRef = useRef(null);
+  const zoomHoldRef = useRef(null);
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -102,7 +103,7 @@ function MockMap({ players, className = '' }) {
   const handleWheelZoom = useCallback(
     (event) => {
       event.preventDefault();
-      const sensitivity = event.ctrlKey ? 0.012 : 0.0035;
+      const sensitivity = event.ctrlKey ? 0.02 : 0.008;
       const delta = -event.deltaY * sensitivity;
       adjustZoom(delta);
     },
@@ -115,6 +116,7 @@ function MockMap({ players, className = '' }) {
 
   const handlePointerDown = useCallback(
     (event) => {
+      if (event.target?.closest?.('button')) return;
       if (zoom <= 1) return;
       setIsDragging(true);
       dragRef.current = {
@@ -143,6 +145,24 @@ function MockMap({ players, className = '' }) {
     setIsDragging(false);
     dragRef.current = null;
   }, []);
+
+  const stopZoomHold = useCallback(() => {
+    if (zoomHoldRef.current) {
+      window.clearInterval(zoomHoldRef.current);
+      zoomHoldRef.current = null;
+    }
+  }, []);
+
+  const startZoomHold = useCallback(
+    (delta) => {
+      stopZoomHold();
+      adjustZoom(delta);
+      zoomHoldRef.current = window.setInterval(() => adjustZoom(delta), 85);
+    },
+    [adjustZoom, stopZoomHold]
+  );
+
+  useEffect(() => () => stopZoomHold(), [stopZoomHold]);
 
   const handleKeyZoom = useCallback(
     (event) => {
@@ -233,6 +253,12 @@ function MockMap({ players, className = '' }) {
           type="button"
           className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
           onClick={() => adjustZoom(-0.25)}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            startZoomHold(-0.12);
+          }}
+          onPointerUp={stopZoomHold}
+          onPointerLeave={stopZoomHold}
           aria-label="Zoom out map"
         >
           -
@@ -249,6 +275,12 @@ function MockMap({ players, className = '' }) {
           type="button"
           className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
           onClick={() => adjustZoom(0.25)}
+          onPointerDown={(event) => {
+            event.stopPropagation();
+            startZoomHold(0.12);
+          }}
+          onPointerUp={stopZoomHold}
+          onPointerLeave={stopZoomHold}
           aria-label="Zoom in map"
         >
           +
