@@ -47,6 +47,7 @@ const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function ImprovePage() {
   const { settings, playerData } = useAuth();
   const currentUser = playerData ?? mockCurrentUser;
+  const hasGeminiKeyAtRuntime = Boolean(String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim());
   const sleepTargetHours = settings?.sleepTarget ?? 7;
   const [showMoreTips, setShowMoreTips] = useState(false);
   const [coachPlan, setCoachPlan] = useState(null);
@@ -278,9 +279,9 @@ function ImprovePage() {
                 <>Source: Offline (add Gemini API key to enable AI)</>
               )}
             </p>
-            {coachPlan.source !== 'gemini' && import.meta.env.DEV && coachPlan.fallbackReason ? (
-              <p className="text-[11px] text-amber" title="Check VITE_GEMINI_API_KEY and Google AI Studio billing">
-                Dev: {coachPlan.fallbackReason}
+            {coachPlan.source !== 'gemini' ? (
+              <p className="text-[11px] text-amber" title="Check key scope, API restrictions, and billing in Google AI Studio">
+                Gemini status: {hasGeminiKeyAtRuntime ? 'key detected in runtime' : 'key missing in runtime'} · reason: {coachPlan.fallbackReason ?? 'unknown'}
               </p>
             ) : null}
           </div>
