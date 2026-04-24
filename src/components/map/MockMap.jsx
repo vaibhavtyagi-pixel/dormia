@@ -183,7 +183,7 @@ function MockMap({ players, className = '' }) {
   return (
     <div
       ref={containerRef}
-      className={`card card-hover relative min-h-[380px] overflow-hidden bg-[#eef1f7] ${className}`}
+      className={`card card-hover relative min-h-[300px] overflow-hidden bg-[#eef1f7] md:min-h-[380px] ${className}`}
       onWheel={handleWheelZoom}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
@@ -215,7 +215,9 @@ function MockMap({ players, className = '' }) {
           const isMostlyAwake = cluster.awakeCount >= cluster.asleepCount;
           const bg = isMostlyAwake ? 'bg-amber' : 'bg-mint';
           const ring = isMostlyAwake ? 'rgba(251,191,36,0.35)' : 'rgba(110,231,183,0.35)';
-          const size = Math.min(14 + cluster.total * 4, 36);
+          const zoomDamp = Math.pow(zoom, 1.35);
+          const size = Math.max(8, Math.min(14 + cluster.total * 4, 36) / zoomDamp);
+          const ringWidth = Math.max(2, 6 / zoomDamp);
           return (
             <div
               key={cluster.key}
@@ -231,7 +233,7 @@ function MockMap({ players, className = '' }) {
                 style={{
                   width: `${size}px`,
                   height: `${size}px`,
-                  boxShadow: `0 0 0 6px ${ring}`,
+                  boxShadow: `0 0 0 ${ringWidth}px ${ring}`,
                 }}
               >
                 {cluster.total}
@@ -245,13 +247,13 @@ function MockMap({ players, className = '' }) {
           );
         })}
       </div>
-      <div className="absolute right-3 top-3 rounded-full border border-[#d9deeb] bg-white/90 px-2 py-1 text-[10px] text-[#64708d]">
-        Built-in global map · {zoom.toFixed(1)}x
+      <div className="absolute right-2 top-2 rounded-full border border-[#d9deeb] bg-white/90 px-2 py-1 text-[9px] text-[#64708d] md:right-3 md:top-3 md:text-[10px]">
+        Map · {zoom.toFixed(1)}x
       </div>
-      <div className="absolute right-3 top-10 flex items-center gap-1 rounded-full border border-[#d9deeb] bg-white/95 p-1">
+      <div className="absolute right-2 top-9 flex items-center gap-1 rounded-full border border-[#d9deeb] bg-white/95 p-1 md:right-3 md:top-10">
         <button
           type="button"
-          className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
+          className="h-8 w-8 rounded-full border border-[#d9deeb] text-base font-semibold text-[#42567d] hover:bg-[#f1f4fb] md:h-7 md:w-7 md:text-sm"
           onClick={() => adjustZoom(-0.25)}
           onPointerDown={(event) => {
             event.stopPropagation();
@@ -265,7 +267,7 @@ function MockMap({ players, className = '' }) {
         </button>
         <button
           type="button"
-          className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
+          className="h-8 w-8 rounded-full border border-[#d9deeb] text-[11px] font-semibold text-[#42567d] hover:bg-[#f1f4fb] md:h-7 md:w-7 md:text-sm"
           onClick={() => applyZoom(1)}
           aria-label="Reset map zoom"
         >
@@ -273,7 +275,7 @@ function MockMap({ players, className = '' }) {
         </button>
         <button
           type="button"
-          className="h-7 w-7 rounded-full border border-[#d9deeb] text-sm font-semibold text-[#42567d] hover:bg-[#f1f4fb]"
+          className="h-8 w-8 rounded-full border border-[#d9deeb] text-base font-semibold text-[#42567d] hover:bg-[#f1f4fb] md:h-7 md:w-7 md:text-sm"
           onClick={() => adjustZoom(0.25)}
           onPointerDown={(event) => {
             event.stopPropagation();
@@ -286,14 +288,14 @@ function MockMap({ players, className = '' }) {
           +
         </button>
       </div>
-      <div className="absolute bottom-3 left-4 flex flex-wrap items-center gap-2 text-[10px]">
-        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#4a5d86]">
+      <div className="absolute bottom-2 left-2 right-2 flex flex-wrap items-center gap-1.5 text-[10px] md:bottom-3 md:left-4 md:right-auto md:gap-2">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-2.5 py-1 font-medium text-[#4a5d86] md:px-3">
           🌍 Global Live Map
         </span>
-        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#2f8e74]">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-2.5 py-1 font-medium text-[#2f8e74] md:px-3">
           😴 {asleepTotal} sleeping
         </span>
-        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-3 py-1 font-medium text-[#b67e0e]">
+        <span className="rounded-full border border-[#d9deeb] bg-white/90 px-2.5 py-1 font-medium text-[#b67e0e] md:px-3">
           ☀️ {awakeTotal} awake
         </span>
       </div>

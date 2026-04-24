@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { mockObituaries, mockPlayers } from '../mockData.js';
+import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
 
 const accentColors = ['bg-indigo', 'bg-amber', 'bg-mint'];
@@ -20,6 +20,7 @@ const causes = [
 ];
 
 function ObituariesPage() {
+  const { players } = useAuth();
   const [liveObituaries, setLiveObituaries] = useState([]);
 
   useEffect(() => {
@@ -46,8 +47,7 @@ function ObituariesPage() {
     return () => unsubscribe();
   }, []);
 
-  const fallbackLostStreaks = mockObituaries;
-  const items = (liveObituaries.length > 0 ? liveObituaries : fallbackLostStreaks).sort(
+  const items = [...liveObituaries].sort(
     (a, b) => new Date(b.timeOfDeath).getTime() - new Date(a.timeOfDeath).getTime()
   );
 
@@ -85,8 +85,13 @@ function ObituariesPage() {
       </div>
 
       <div className="mt-8 space-y-5">
+        {items.length === 0 ? (
+          <article className="card border border-border bg-card p-5 text-sm text-text-secondary">
+            No lost streak records yet in Firebase.
+          </article>
+        ) : null}
         {items.map((obituary, index) => {
-          const matchingPlayer = mockPlayers.find((player) => player.displayName === obituary.displayName);
+          const matchingPlayer = (players ?? []).find((player) => player.displayName === obituary.displayName);
           const continent = matchingPlayer?.continent ?? 'World';
           const cause = causes[index % causes.length];
           const date = new Date(obituary.timeOfDeath);

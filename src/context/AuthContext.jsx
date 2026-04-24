@@ -12,7 +12,6 @@ import {
 } from 'firebase/firestore';
 import { ref, set, update } from 'firebase/database';
 import { auth, db, hasFirebaseConfig, rtdb } from '../firebase.js';
-import { mockPlayers } from '../mockData.js';
 
 const AuthContext = createContext(null);
 const GOOGLE_MAPS_API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY;
@@ -60,7 +59,7 @@ async function reverseGeocode(lat, lng) {
 export function AuthProvider({ children }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [playerData, setPlayerData] = useState(null);
-  const [players, setPlayers] = useState(mockPlayers);
+  const [players, setPlayers] = useState([]);
   const [membershipByUid, setMembershipByUid] = useState({});
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,7 +67,7 @@ export function AuthProvider({ children }) {
     if (!hasFirebaseConfig || !auth || !db || !rtdb) {
       setCurrentUser(null);
       setPlayerData(null);
-      setPlayers(mockPlayers);
+      setPlayers([]);
       setIsLoading(false);
       return undefined;
     }
@@ -185,7 +184,7 @@ export function AuthProvider({ children }) {
     if (!db) return undefined;
     const unsubscribe = onSnapshot(query(collection(db, 'players')), (snapshot) => {
       if (snapshot.empty) {
-        setPlayers(mockPlayers);
+        setPlayers([]);
         return;
       }
 

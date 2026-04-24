@@ -1,13 +1,22 @@
 import { useEffect, useMemo, useState } from 'react';
+import { collection, onSnapshot } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext.jsx';
-import { mockWinners } from '../mockWinners.js';
-import { mockCurrentUser } from '../mockData.js';
+import { db } from '../firebase.js';
 
 const continents = ['Africa', 'Americas', 'Asia', 'Europe', 'Oceania'];
 
 function ProfilePage() {
   const { playerData, settings, saveSettings, players, isLoading } = useAuth();
-  const safePlayerData = playerData ?? mockCurrentUser;
+  const [winnerRows, setWinnerRows] = useState([]);
+  const safePlayerData = playerData ?? {
+    uid: '',
+    displayName: 'Player',
+    isAsleep: false,
+    xp: 0,
+    currentStreak: 0,
+    longestStreak: 0,
+    credits: 0,
+  };
   const [sleepTarget, setSleepTarget] = useState(settings.sleepTarget);
   const [continent, setContinent] = useState(settings.continent);
   const [hasAndroidApk, setHasAndroidApk] = useState(settings.hasAndroidApk);
@@ -23,7 +32,7 @@ function ProfilePage() {
     if (safeXp < 5000) return 'Sleep Athlete 🏃';
     return 'Slumber Legend 👑';
   })();
-  const winStats = mockWinners.reduce(
+  const winStats = winnerRows.reduce(
     (accumulator, entry) => {
       if (entry.winnerUid === safePlayerData.uid) {
         accumulator.total += 1;
@@ -33,6 +42,18 @@ function ProfilePage() {
     },
     { total: 0, byLeague: {} }
   );
+
+  useEffect(() => {
+    if (!db) return undefined;
+    const unsubscribe = onSnapshot(collection(db, 'league_results'), (snapshot) => {
+      if (snapshot.empty) {
+        setWinnerRows([]);
+        return;
+      }
+      setWinnerRows(snapshot.docs.map((item) => ({ id: item.id, ...item.data() })));
+    });
+    return () => unsubscribe();
+  }, []);
 
   useEffect(() => {
     setSleepTarget(settings.sleepTarget);

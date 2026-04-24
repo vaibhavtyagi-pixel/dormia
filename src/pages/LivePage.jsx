@@ -1,9 +1,11 @@
 import AwakeCounter from '../components/map/AwakeCounter.jsx';
 import MockMap from '../components/map/MockMap.jsx';
-import { mockPlayers } from '../mockData.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function LivePage() {
-  const awakeCount = mockPlayers.filter((player) => !player.isAsleep).length;
+  const { players } = useAuth();
+  const livePlayers = players ?? [];
+  const awakeCount = livePlayers.filter((player) => !player.isAsleep).length;
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 bg-base px-4 py-10 text-center text-ink animate-fade-up">
@@ -13,7 +15,7 @@ function LivePage() {
       </header>
 
       <div className="flex w-full max-w-6xl flex-col gap-4 md:relative">
-        <MockMap players={mockPlayers} className="h-[55vh] min-h-[360px] w-full" />
+        <MockMap players={livePlayers} className="h-[55vh] min-h-[360px] w-full" />
         <AwakeCounter count={awakeCount} className="mx-auto md:absolute md:right-6 md:top-6" />
       </div>
 

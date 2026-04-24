@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { mockCurrentUser, mockPlayers } from '../mockData.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { generateCoachPlan } from '../services/improveCoach.js';
 
@@ -45,8 +44,16 @@ const tips = [
 const weekdayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 function ImprovePage() {
-  const { settings, playerData } = useAuth();
-  const currentUser = playerData ?? mockCurrentUser;
+  const { settings, playerData, players } = useAuth();
+  const currentUser = playerData ?? {
+    uid: '',
+    displayName: 'Player',
+    continent: 'Unknown',
+    hasAndroidApk: false,
+    currentStreak: 0,
+    longestStreak: 0,
+    xp: 0,
+  };
   const hasGeminiKeyAtRuntime = Boolean(String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim());
   const sleepTargetHours = settings?.sleepTarget ?? 7;
   const [showMoreTips, setShowMoreTips] = useState(false);
@@ -56,12 +63,12 @@ function ImprovePage() {
 
   const sorted = useMemo(
     () =>
-      [...mockPlayers].sort((a, b) => {
+      [...(players ?? [])].sort((a, b) => {
         if (b.xp !== a.xp) return b.xp - a.xp;
         if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
         return b.longestStreak - a.longestStreak;
       }),
-    []
+    [players]
   );
   const top3Threshold = sorted[2]?.xp ?? currentUser.xp;
   const safeXp = Number(currentUser.xp) || 0;

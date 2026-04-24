@@ -20,9 +20,7 @@ import MockMap from '../components/map/MockMap.jsx';
 import LastAwakeNotification from '../components/notifications/LastAwakeNotification.jsx';
 import MockObituaryToast from '../components/notifications/MockObituaryToast.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
-import { mockWinners } from '../mockWinners.js';
 import { db, rtdb } from '../firebase.js';
-import { mockPlayers } from '../mockData.js';
 import { normalizeLeagueKey } from '../utils/leagueScopes.js';
 
 function HomePage() {
@@ -44,7 +42,7 @@ function HomePage() {
   const [joinCode, setJoinCode] = useState('');
   const [leagueMessage, setLeagueMessage] = useState('');
   const [mapPlayers, setMapPlayers] = useState([]);
-  const [winnersData, setWinnersData] = useState(mockWinners);
+  const [winnersData, setWinnersData] = useState([]);
   const [dailyRewardData, setDailyRewardData] = useState(null);
   const [activeQuest, setActiveQuest] = useState(null);
   const [sleepRewardMessage, setSleepRewardMessage] = useState('');
@@ -57,7 +55,7 @@ function HomePage() {
     isAsleep: false,
     displayName: currentUser?.displayName ?? 'Player',
   };
-  const sourcePlayers = players?.length ? players : mockPlayers;
+  const sourcePlayers = players ?? [];
 
   const isDevMode = useMemo(() => new URLSearchParams(location.search).get('dev') === 'true', [location.search]);
   const awakeCount = sourcePlayers.filter((player) => !player.isAsleep).length;
@@ -113,7 +111,7 @@ function HomePage() {
       query(collection(db, 'league_results'), orderBy('date', 'desc'), limit(30)),
       (snapshot) => {
         if (snapshot.empty) {
-          setWinnersData(mockWinners);
+          setWinnersData([]);
           return;
         }
         const rows = snapshot.docs.map((item) => ({
@@ -123,7 +121,7 @@ function HomePage() {
         }));
         setWinnersData(rows);
       },
-      () => setWinnersData(mockWinners)
+      () => setWinnersData([])
     );
 
     const rewardUnsubscribe = onSnapshot(doc(db, 'daily_rewards', currentUser.uid), (snapshot) => {
@@ -546,12 +544,12 @@ function HomePage() {
         </div>
       </section>
 
-      <div className="relative mt-6 min-h-[72vh]">
-        <MockMap players={mapPlayers.length > 0 ? mapPlayers : mockPlayers} className="h-[72vh] min-h-[520px] w-full" />
+      <div className="relative mt-6 min-h-[55vh] md:min-h-[72vh]">
+        <MockMap players={mapPlayers} className="h-[55vh] min-h-[340px] w-full md:h-[72vh] md:min-h-[520px]" />
       </div>
 
       {isDevMode ? (
-        <div className="card fixed bottom-6 right-4 z-50 w-80 border-indigo/20 bg-card p-4">
+        <div className="card fixed bottom-4 left-4 right-4 z-50 w-auto border-indigo/20 bg-card p-4 md:bottom-6 md:left-auto md:right-4 md:w-80">
           <p className="inline-block rounded-full bg-indigo-pale px-2 py-1 text-[10px] font-medium tracking-[0.18em] text-indigo">
             DEV MODE
           </p>
@@ -584,7 +582,7 @@ function HomePage() {
       />
       <MockObituaryToast show={showObituaryToast} displayName={safePlayerData.displayName} />
       {sleepRewardMessage ? (
-        <div className="card fixed bottom-6 left-1/2 z-50 -translate-x-1/2 px-4 py-3 text-sm text-indigo">
+        <div className="card fixed bottom-4 left-4 right-4 z-50 px-4 py-3 text-sm text-indigo md:bottom-6 md:left-1/2 md:right-auto md:max-w-[80vw] md:-translate-x-1/2">
           {sleepRewardMessage}
         </div>
       ) : null}

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { mockWinners } from '../../mockWinners.js';
 import { getLeaguePlayers, leagueConfigs, normalizeLeagueKey } from '../../utils/leagueScopes.js';
 
 function sortPlayers(players) {
@@ -22,7 +21,7 @@ function LeagueResultsPanel({
   activeLeague: activeLeagueProp,
   onLeagueChange,
   membershipByUid = {},
-  winners = mockWinners,
+  winners = [],
 }) {
   const [internalLeague, setInternalLeague] = useState('myLeague');
   const activeLeague = activeLeagueProp ?? internalLeague;

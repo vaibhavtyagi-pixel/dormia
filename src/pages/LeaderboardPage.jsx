@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
-import { mockPlayers } from '../mockData.js';
 import { getLeaguePlayers, leagueConfigs } from '../utils/leagueScopes.js';
 
 const continentEmoji = {
@@ -46,16 +45,20 @@ function LeaderboardPage() {
     return () => unsubscribe();
   }, []);
 
-  const sourcePlayers = livePlayers.length > 0 ? livePlayers : players?.length > 0 ? players : mockPlayers;
+  const sourcePlayers = livePlayers.length > 0 ? livePlayers : players?.length > 0 ? players : [];
+  const currentPlayer = useMemo(
+    () => sourcePlayers.find((player) => player.uid === currentUser?.uid) ?? null,
+    [sourcePlayers, currentUser?.uid]
+  );
 
   const leaderboard = useMemo(
     () =>
-      [...getLeaguePlayers(activeLeague, sourcePlayers, currentUser ?? mockPlayers[1], membershipByUid)].sort((a, b) => {
+      [...getLeaguePlayers(activeLeague, sourcePlayers, currentPlayer, membershipByUid)].sort((a, b) => {
         if (b.xp !== a.xp) return b.xp - a.xp;
         if (b.currentStreak !== a.currentStreak) return b.currentStreak - a.currentStreak;
         return b.longestStreak - a.longestStreak;
       }),
-    [sourcePlayers, activeLeague, currentUser, membershipByUid]
+    [sourcePlayers, activeLeague, currentPlayer, membershipByUid]
   );
 
   return (
