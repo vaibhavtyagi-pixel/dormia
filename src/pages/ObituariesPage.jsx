@@ -109,12 +109,12 @@ function ObituariesPage() {
                 }}
               />
               <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
-                <h3 className="font-sora text-2xl font-bold text-white">Sample player</h3>
-                <span className="font-mono text-sm text-[#5DE2B1]">5-day streak</span>
+                <h3 className="font-sora text-2xl font-bold text-white">Alex</h3>
+                <span className="font-mono text-sm text-[#5DE2B1]">7-day streak</span>
               </div>
-              <p className="relative z-10 mt-3 font-mono text-sm text-[#DDE3FF]">Preview card layout</p>
+              <p className="relative z-10 mt-3 font-mono text-sm text-[#DDE3FF]">Example public obituary</p>
               <p className="relative z-10 mt-4 text-base italic text-white/90">
-                This is how new Lost Streak entries will appear once the next streak drops.
+                Here lies Alex&apos;s 7-day streak. Killed at 2:47am by what appears to have been Netflix autoplay. Survived by three missed alarms and one very regrettable life decision. They were doing so well.
               </p>
             </article>
           </>

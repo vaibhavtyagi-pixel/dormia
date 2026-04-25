@@ -200,16 +200,6 @@ function ProfilePage() {
               </select>
             </label>
 
-            <label className="flex items-center justify-between rounded-xl border border-border bg-base px-3 py-2 text-sm text-ink">
-              <span>Has Android APK</span>
-              <input
-                type="checkbox"
-                checked={hasAndroidApk}
-                onChange={(event) => setHasAndroidApk(event.target.checked)}
-                className="h-4 w-4 accent-indigo"
-              />
-            </label>
-
             <button
               type="submit"
               className="w-full rounded-full border border-border bg-indigo px-4 py-2 text-sm font-medium text-white transition hover:brightness-105"
