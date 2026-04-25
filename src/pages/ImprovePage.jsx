@@ -267,9 +267,7 @@ function ImprovePage() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-sora text-xl font-bold text-ink">AI Night Plan</h2>
-            <p className="text-sm text-text-secondary">
-              Your plan is generated with Google Gemini when your API key is configured in the project (local or Vercel). Otherwise you will see a simple offline version.
-            </p>
+            <p className="text-sm text-text-secondary">Generate a personalized plan for tonight.</p>
           </div>
           <button
             type="button"
@@ -344,7 +342,7 @@ function ImprovePage() {
           </div>
         ) : (
           <p className="mt-3 text-sm text-text-secondary">
-            No tracked sleep sessions yet in Firebase. Sleep/wake from the dashboard to start generating real weekly stats.
+            No tracked sleep sessions yet. Sleep/wake from the dashboard to start generating weekly stats.
           </p>
         )}
 
@@ -367,7 +365,7 @@ function ImprovePage() {
             ))}
           </div>
         ) : (
-          <p className="mt-3 text-sm text-text-secondary">Your best nights will appear once Firebase sleep-session history is available.</p>
+          <p className="mt-3 text-sm text-text-secondary">Your best nights will appear once enough sleep history is available.</p>
         )}
       </article>
 

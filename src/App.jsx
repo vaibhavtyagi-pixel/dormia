@@ -18,7 +18,7 @@ function ProtectedRoute({ children }) {
         <div className="card max-w-md p-6">
           <p className="font-sora text-lg font-semibold">Connecting DORMIA...</p>
           <p className="mt-2 text-sm text-text-secondary">
-            If this takes too long, refresh once and verify Firebase env variables in Vercel.
+            If this takes too long, refresh once and try again.
           </p>
         </div>
       </div>

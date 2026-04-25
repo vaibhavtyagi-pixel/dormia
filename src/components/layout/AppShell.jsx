@@ -70,7 +70,9 @@ function SidebarContent({ onNavigate }) {
 }
 
 function AppShell() {
+  const { playerData } = useAuth();
   const [isMobileOpen, setIsMobileOpen] = useState(false);
+  const shouldShowApkPrompt = playerData?.hasAndroidApk === false;
 
   return (
     <div className="min-h-screen bg-base text-ink md:grid md:grid-cols-[220px_1fr]">
@@ -100,6 +102,21 @@ function AppShell() {
       ) : null}
 
       <main className="animate-fade-up min-h-screen overflow-y-auto px-4 pb-6 pt-16 md:px-8 md:pt-8">
+        {shouldShowApkPrompt ? (
+          <div className="mb-4 rounded-2xl border border-border bg-indigo/20 p-4">
+            <p className="text-sm text-ink">
+              Get the Android app for the best tracking experience.
+              <a
+                href="https://i.apponthego.com/5defc"
+                target="_blank"
+                rel="noreferrer"
+                className="ml-2 font-semibold text-mint underline underline-offset-2"
+              >
+                Download APK
+              </a>
+            </p>
+          </div>
+        ) : null}
         <Outlet />
       </main>
     </div>

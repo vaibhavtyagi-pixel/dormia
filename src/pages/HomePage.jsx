@@ -252,7 +252,7 @@ function HomePage() {
     );
     setLeagueCode(newCode);
     setLeagueName(`League ${newCode.slice(-4)}`);
-    setLeagueMessage(`League created in Firebase. Share code ${newCode} to invite others.`);
+    setLeagueMessage('');
     setActiveLeague('myLeague');
   };
 
@@ -290,7 +290,7 @@ function HomePage() {
     );
     setLeagueCode(normalized);
     setLeagueName(league.name ?? `Joined ${normalized}`);
-    setLeagueMessage(`You joined ${league.name ?? normalized} from Firebase.`);
+    setLeagueMessage('');
     setActiveLeague('myLeague');
     setJoinCode('');
   };
@@ -567,14 +567,14 @@ function HomePage() {
           <p className="text-xs uppercase tracking-[0.14em] text-text-secondary">Active quest</p>
           <p className="mt-1 text-sm font-semibold text-ink">{activeQuest?.title ?? 'No active quest yet'}</p>
           <p className="text-xs text-text-secondary">
-            {activeQuest ? `${activeQuest.progress ?? 0}/${activeQuest.goal ?? 0} progress` : 'Create one from Firebase to start.'}
+            {activeQuest ? `${activeQuest.progress ?? 0}/${activeQuest.goal ?? 0} progress` : 'No active quest yet.'}
           </p>
         </article>
       </section>
 
       <section className="card card-hover mt-6 p-5">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="font-sora text-xl font-bold text-ink">Sleep Tracking (Real Firebase)</h3>
+          <h3 className="font-sora text-xl font-bold text-ink">Sleep Tracking</h3>
           <span className="rounded-full border border-border bg-card px-3 py-1 text-xs text-text-secondary">
             Latest from each user profile
           </span>
@@ -662,7 +662,7 @@ function HomePage() {
               ) : (
                 <tr>
                   <td colSpan={6} className="rounded-xl border border-border bg-card px-4 py-4 text-sm text-text-secondary">
-                    No players loaded from Firebase yet.
+                    No players loaded yet.
                   </td>
                 </tr>
               )}

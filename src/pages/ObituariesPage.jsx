@@ -96,9 +96,28 @@ function ObituariesPage() {
 
       <div className="mt-8 space-y-5">
         {items.length === 0 ? (
-          <article className="card border border-border bg-card p-5 text-sm text-text-secondary">
-            No lost streak records yet in Firebase.
-          </article>
+          <>
+            <article className="card border border-border bg-card p-5 text-sm text-text-secondary">
+              No lost streak records yet.
+            </article>
+            <article className="card relative overflow-hidden p-6 opacity-90">
+              <div
+                className="absolute inset-0 rounded-[16px] pointer-events-none"
+                style={{
+                  border: '1px solid rgba(255, 80, 80, 0.3)',
+                  boxShadow: '0 0 12px rgba(255, 80, 80, 0.1)',
+                }}
+              />
+              <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-sora text-2xl font-bold text-white">Sample player</h3>
+                <span className="font-mono text-sm text-[#5DE2B1]">5-day streak</span>
+              </div>
+              <p className="relative z-10 mt-3 font-mono text-sm text-[#DDE3FF]">Preview card layout</p>
+              <p className="relative z-10 mt-4 text-base italic text-white/90">
+                This is how new Lost Streak entries will appear once the next streak drops.
+              </p>
+            </article>
+          </>
         ) : null}
         {items.map((obituary, index) => {
           const date = toDate(obituary?.timeOfDeath);

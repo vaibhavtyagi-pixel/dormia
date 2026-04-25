@@ -24,7 +24,7 @@ class ErrorBoundary extends React.Component {
           <div className="card max-w-md p-6">
             <p className="font-sora text-lg font-semibold">Something failed while opening DORMIA</p>
             <p className="mt-2 text-sm text-text-secondary">
-              Refresh once. If it persists, verify Firebase env variables in Vercel.
+              Refresh once. If it persists, try again in a moment.
             </p>
             <p className="mt-3 rounded-lg border border-border bg-card px-3 py-2 font-mono text-xs text-amber">
               {this.state.errorMessage}

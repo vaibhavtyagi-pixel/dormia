@@ -79,7 +79,7 @@ function LeaderboardPage() {
       <h2 className="font-sora text-4xl font-extrabold tracking-tight text-indigo">LEADERBOARD</h2>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        {leagueConfigs.map((filter) => (
+        {leagueConfigs.filter((filter) => filter.key !== 'continent').map((filter) => (
           <button
             key={filter.key}
             type="button"

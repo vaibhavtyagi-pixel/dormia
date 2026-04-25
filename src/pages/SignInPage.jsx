@@ -139,10 +139,10 @@ function SignInPage() {
 
         <div className="welcome-signin-wrap">
           <button type="button" onClick={handleSignIn} disabled={!auth} className="welcome-signin-button">
-            {auth ? 'Sign in with Google' : 'Firebase not configured'}
+            {auth ? 'Sign in with Google' : 'Sign in unavailable'}
           </button>
           {!auth ? (
-            <p className="mt-3 text-xs text-[#a0a8d7]">Set `VITE_FIREBASE_*` variables to enable sign in.</p>
+            <p className="mt-3 text-xs text-[#a0a8d7]">Please try again later.</p>
           ) : null}
         </div>
       </div>
