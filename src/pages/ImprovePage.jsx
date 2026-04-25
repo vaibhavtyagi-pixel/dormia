@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext.jsx';
+import { db } from '../firebase.js';
 import { generateCoachPlan } from '../services/improveCoach.js';
 
 const tips = [
@@ -58,6 +60,7 @@ function ImprovePage() {
   const [coachPlan, setCoachPlan] = useState(null);
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [reminderMessage, setReminderMessage] = useState('');
+  const [weeklyData, setWeeklyData] = useState([]);
 
   const sorted = useMemo(
     () =>
@@ -76,7 +79,49 @@ function ImprovePage() {
   const nightsToClose = Math.max(1, Math.ceil(gapXp / 120));
   const targetXp = nightsToClose * 120;
 
-  const weeklyData = [];
+  useEffect(() => {
+    if (!db || !currentUser?.uid) {
+      setWeeklyData([]);
+      return undefined;
+    }
+    const sessionsQuery = query(
+      collection(db, 'sleep_sessions'),
+      where('uid', '==', currentUser.uid),
+      orderBy('createdAt', 'desc'),
+      limit(14)
+    );
+    const unsubscribe = onSnapshot(
+      sessionsQuery,
+      (snapshot) => {
+        if (snapshot.empty) {
+          setWeeklyData([]);
+          return;
+        }
+        const rows = snapshot.docs
+          .map((item, index) => {
+            const data = item.data();
+            const dateValue =
+              typeof data?.createdAt?.toDate === 'function'
+                ? data.createdAt.toDate()
+                : new Date(Date.now() - index * 86400000);
+            const hoursSlept = Number(data?.sleptHours) || 0;
+            return {
+              id: item.id,
+              day: dateValue.toLocaleDateString('en-US', { weekday: 'short' }),
+              date: dateValue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+              hoursSlept: Number(hoursSlept.toFixed(1)),
+              hitTarget: Boolean(data?.hitTarget),
+              xpEarned: Number(data?.xpEarned) || 0,
+              isToday: dateValue.toDateString() === new Date().toDateString(),
+            };
+          })
+          .reverse();
+        setWeeklyData(rows);
+      },
+      () => setWeeklyData([])
+    );
+    return () => unsubscribe();
+  }, [currentUser?.uid]);
 
   const bestDays = useMemo(
     () => [...weeklyData].sort((a, b) => b.xpEarned - a.xpEarned).slice(0, 3),

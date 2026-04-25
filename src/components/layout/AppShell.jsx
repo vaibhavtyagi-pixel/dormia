@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { useAuth } from '../../context/AuthContext.jsx';
-import DevBanner from './DevBanner.jsx';
 import { auth } from '../../firebase.js';
 
 const links = [
@@ -101,7 +100,6 @@ function AppShell() {
       ) : null}
 
       <main className="animate-fade-up min-h-screen overflow-y-auto px-4 pb-6 pt-16 md:px-8 md:pt-8">
-        <DevBanner />
         <Outlet />
       </main>
     </div>

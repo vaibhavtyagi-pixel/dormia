@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import {
+  addDoc,
   collection,
   doc,
+  getDoc,
   getDocs,
   increment,
   limit,
@@ -345,6 +347,60 @@ function HomePage() {
         longestStreak: Math.max(safePlayerData.longestStreak ?? 0, nextStreak),
       });
       await update(ref(rtdb, `dormia/players/${currentUser.uid}`), { isAsleep: false });
+
+      await addDoc(collection(db, 'sleep_sessions'), {
+        uid: currentUser.uid,
+        sleptHours: Number(sleptHours.toFixed(2)),
+        targetHours,
+        deviation: Number(deviation.toFixed(2)),
+        hitTarget: hitBand,
+        xpEarned: earnedXp,
+        creditsEarned: earnedCredits,
+        createdAt: serverTimestamp(),
+      });
+
+      const dailyRewardRef = doc(db, 'daily_rewards', currentUser.uid);
+      const dailyRewardSnap = await getDoc(dailyRewardRef);
+      const todayKey = now.toISOString().slice(0, 10);
+      const previous = dailyRewardSnap.exists() ? dailyRewardSnap.data() : {};
+      const previousKey = previous?.lastClaimDate ?? null;
+      let nextStreakDay = Number(previous?.streakDay) || 0;
+      let nextTotalClaims = Number(previous?.totalClaims) || 0;
+      if (previousKey !== todayKey) {
+        nextStreakDay += 1;
+        nextTotalClaims += 1;
+      }
+
+      await setDoc(
+        dailyRewardRef,
+        {
+          uid: currentUser.uid,
+          streakDay: nextStreakDay,
+          totalClaims: nextTotalClaims,
+          lastClaimDate: todayKey,
+          lastRewardXp: earnedXp,
+          lastRewardCredits: earnedCredits,
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      const activeQuestQuery = query(collection(db, `quests/${currentUser.uid}/active`), limit(1));
+      const activeQuestSnap = await getDocs(activeQuestQuery);
+      if (!activeQuestSnap.empty) {
+        const activeQuestDoc = activeQuestSnap.docs[0];
+        const activeQuest = activeQuestDoc.data();
+        const currentProgress = Number(activeQuest?.progress) || 0;
+        const goal = Number(activeQuest?.goal) || 0;
+        const nextProgress = currentProgress + 1;
+        await updateDoc(activeQuestDoc.ref, {
+          progress: increment(1),
+          status: goal > 0 && nextProgress >= goal ? 'completed' : activeQuest?.status ?? 'active',
+          completedAt: goal > 0 && nextProgress >= goal ? serverTimestamp() : activeQuest?.completedAt ?? null,
+          updatedAt: serverTimestamp(),
+        });
+      }
+
       const deltaLabel = delta >= 0 ? `+${delta.toFixed(1)}h` : `${delta.toFixed(1)}h`;
       setSleepRewardMessage(
         `+${earnedXp} XP, +${earnedCredits} coins (${sleptHours.toFixed(1)}h vs target ${targetHours}h, ${deltaLabel}).`
