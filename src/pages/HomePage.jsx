@@ -25,6 +25,43 @@ import { useAuth } from '../context/AuthContext.jsx';
 import { db, rtdb } from '../firebase.js';
 import { normalizeLeagueKey } from '../utils/leagueScopes.js';
 
+async function generateSleepObituaryWithGemini({ displayName, streakLength, timeOfDeath }) {
+  const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
+  const hhmm = timeOfDeath.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+  const prompt = `Write a darkly funny public sleep obituary in exactly
+2-3 sentences. Player name: ${displayName}.
+Streak that just died: ${streakLength} days.
+Time of death: ${hhmm}.
+Rules: Be specific about the timestamp. Invent a
+plausible cause of death such as Netflix, a group chat,
+existential dread, or doom scrolling. Do not be mean.
+End with something poignant or absurd.
+Maximum 3 sentences.`;
+
+  if (!apiKey) {
+    return `${displayName}'s ${streakLength}-day streak flatlined at ${hhmm} after an unfortunate overtime session with doom scrolling. The scoreboard called it a tactical collapse, but everyone knows the group chat delivered the final blow. Tomorrow is either redemption or another beautifully avoidable tragedy.`;
+  }
+
+  const model = 'gemini-2.0-flash';
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: prompt }] }],
+      }),
+    });
+    const raw = await response.json();
+    const text = raw?.candidates?.[0]?.content?.parts?.[0]?.text;
+    if (response.ok && text) return String(text).trim();
+  } catch {
+    // Fall through to local fallback.
+  }
+
+  return `${displayName}'s ${streakLength}-day streak expired at ${hhmm} after promising "one more episode" and believing it. Witnesses report the final minutes were spent negotiating with existential dread and autoplay. It was absurd, slightly poetic, and entirely preventable.`;
+}
+
 function HomePage() {
   const location = useLocation();
   const {
@@ -309,6 +346,7 @@ function HomePage() {
       const targetHours = Math.max(5, Number(settings.sleepTarget) || 7);
       const delta = sleptHours - targetHours;
       const deviation = Math.abs(delta);
+      const missedTarget = sleptHours < targetHours;
 
       const baseXp = 25;
       const qualityBonus = Math.max(0, Math.round(90 - deviation * 30));
@@ -316,8 +354,7 @@ function HomePage() {
       const earnedXp = Math.max(8, baseXp + qualityBonus - heavyPenalty);
       const earnedCredits = Math.max(2, Math.round(earnedXp / 8));
       const hitBand = deviation <= 1.25;
-      const streakDelta = hitBand ? 1 : safePlayerData.currentStreak > 0 ? -1 : 0;
-      const nextStreak = Math.max(0, safePlayerData.currentStreak + streakDelta);
+      const nextStreak = missedTarget ? 0 : Math.max(0, safePlayerData.currentStreak + (hitBand ? 1 : 0));
 
       await updateDoc(doc(db, 'players', currentUser.uid), {
         isAsleep: false,
@@ -332,6 +369,23 @@ function HomePage() {
         longestStreak: Math.max(safePlayerData.longestStreak ?? 0, nextStreak),
       });
       await update(ref(rtdb, `dormia/players/${currentUser.uid}`), { isAsleep: false });
+
+      if (missedTarget) {
+        const obituaryText = await generateSleepObituaryWithGemini({
+          displayName: safePlayerData.displayName ?? 'Player',
+          streakLength: Number(safePlayerData.currentStreak) || 0,
+          timeOfDeath: now,
+        });
+
+        await addDoc(collection(db, 'obituaries'), {
+          uid: currentUser.uid,
+          displayName: safePlayerData.displayName ?? 'Player',
+          streakLength: Number(safePlayerData.currentStreak) || 0,
+          timeOfDeath: serverTimestamp(),
+          obituaryText,
+          isPublic: true,
+        });
+      }
 
       await addDoc(collection(db, 'sleep_sessions'), {
         uid: currentUser.uid,

@@ -1,23 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
 
-const accentColors = ['bg-indigo', 'bg-amber', 'bg-mint'];
-const continentEmoji = {
-  Europe: '🇪🇺',
-  Americas: '🌎',
-  Asia: '🌏',
-  Africa: '🌍',
-  Oceania: '🌊',
-};
+function toDate(value) {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  if (typeof value?.toDate === 'function') return value.toDate();
+  if (typeof value === 'string' || typeof value === 'number') return new Date(value);
+  return null;
+}
 
 function ObituariesPage() {
-  const { players } = useAuth();
   const [liveObituaries, setLiveObituaries] = useState([]);
 
   useEffect(() => {
-    const obituariesQuery = query(collection(db, 'obituaries'), orderBy('timeOfDeath', 'desc'), limit(10));
+    if (!db) {
+      setLiveObituaries([]);
+      return undefined;
+    }
+    const obituariesQuery = query(collection(db, 'obituaries'), orderBy('timeOfDeath', 'desc'), limit(20));
     const unsubscribe = onSnapshot(
       obituariesQuery,
       (snapshot) => {
@@ -40,9 +41,25 @@ function ObituariesPage() {
     return () => unsubscribe();
   }, []);
 
-  const items = [...liveObituaries].sort(
-    (a, b) => new Date(b.timeOfDeath).getTime() - new Date(a.timeOfDeath).getTime()
+  const items = useMemo(
+    () =>
+      [...liveObituaries].sort((a, b) => {
+        const aDate = toDate(a?.timeOfDeath);
+        const bDate = toDate(b?.timeOfDeath);
+        return (bDate?.getTime() ?? 0) - (aDate?.getTime() ?? 0);
+      }),
+    [liveObituaries]
   );
+
+  const lostThisWeek = useMemo(() => {
+    const now = Date.now();
+    const weekMs = 7 * 24 * 60 * 60 * 1000;
+    return items.filter((item) => {
+      const date = toDate(item?.timeOfDeath);
+      if (!date || Number.isNaN(date.getTime())) return false;
+      return now - date.getTime() <= weekMs;
+    }).length;
+  }, [items]);
 
   return (
     <section className="animate-fade-up">
@@ -72,7 +89,7 @@ function ObituariesPage() {
         </div>
         <article className="card relative z-10 px-4 py-3">
           <p className="text-xs uppercase tracking-[0.12em] text-text-secondary">This Week</p>
-          <p className="font-mono text-3xl text-indigo">{items.length}</p>
+          <p className="font-mono text-3xl text-indigo">{lostThisWeek}</p>
           <p className="text-sm text-text-secondary">streaks lost</p>
         </article>
       </div>
@@ -84,11 +101,8 @@ function ObituariesPage() {
           </article>
         ) : null}
         {items.map((obituary, index) => {
-          const matchingPlayer = (players ?? []).find((player) => player.displayName === obituary.displayName);
-          const continent = matchingPlayer?.continent ?? 'World';
-          const cause = obituary?.cause ?? obituary?.reason ?? 'a streak break event';
-          const date = new Date(obituary.timeOfDeath);
-          const formattedDate = date.toLocaleString('en-US', {
+          const date = toDate(obituary?.timeOfDeath);
+          const formattedDate = date?.toLocaleString('en-US', {
             month: 'long',
             day: 'numeric',
             year: 'numeric',
@@ -99,45 +113,28 @@ function ObituariesPage() {
           return (
             <article
               key={obituary.id}
-              className="animate-fade-up card card-hover relative overflow-hidden border-amber-pale bg-amber-warm p-6"
+              className="animate-fade-down card relative overflow-hidden p-6"
               style={{ animationDelay: `${index * 100}ms` }}
             >
-              <span className={`absolute left-0 top-0 h-full w-1 ${accentColors[index % accentColors.length]}`} />
-              <span className="pointer-events-none absolute right-4 top-1 text-[64px] leading-none text-ink/5">💤</span>
-
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-pale font-mono text-sm text-indigo">
-                  {obituary.displayName.charAt(0)}
+              <div
+                className="absolute inset-0 rounded-[16px] pointer-events-none"
+                style={{
+                  border: '1px solid rgba(255, 80, 80, 0.3)',
+                  boxShadow: '0 0 12px rgba(255, 80, 80, 0.1)',
+                }}
+              />
+              <div className="relative z-10 flex flex-wrap items-center justify-between gap-3">
+                <h3 className="font-sora text-2xl font-bold text-white">{obituary.displayName ?? 'Unknown player'}</h3>
+                <span className="font-mono text-sm text-[#5DE2B1]">
+                  {Number(obituary?.streakLength) || 0}-day streak
                 </span>
-                <div>
-                  <h3 className="font-sora text-2xl font-bold text-ink">
-                    {obituary.displayName} {continentEmoji[continent] || '🌍'}
-                  </h3>
-                  <span className="mt-1 inline-block rounded-full bg-indigo-pale px-3 py-1 text-sm font-medium text-indigo">
-                    {obituary.streakLength}-day streak
-                  </span>
-                </div>
               </div>
-
-              <p className="mt-4 text-[13px] italic text-text-secondary">💤 Taken by {cause}</p>
-              <p className="mt-3 text-sm text-text-secondary">
-                {obituary.obituaryText ?? obituary.message ?? 'No additional details were recorded for this streak loss.'}
+              <p className="relative z-10 mt-3 font-mono text-sm text-[#DDE3FF]">
+                {formattedDate ?? 'Unknown date'}
               </p>
-
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-                <p className="font-mono text-sm text-text-secondary">{formattedDate.replace(',', ' ·')}</p>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    className="rounded-full border border-border bg-transparent px-3 py-1 text-xs text-text-secondary"
-                  >
-                    Share
-                  </button>
-                  <span className="rounded-full bg-amber-pale px-2 py-1 text-xs text-ink">
-                    RIP {obituary.streakLength} days
-                  </span>
-                </div>
-              </div>
+              <p className="relative z-10 mt-4 text-base italic text-white/90">
+                {obituary.obituaryText ?? 'No obituary text available.'}
+              </p>
             </article>
           );
         })}

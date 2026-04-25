@@ -84,6 +84,17 @@ textarea::placeholder {
   }
 }
 
+@keyframes fadeDown {
+  from {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes countUpPop {
   0% {
     transform: translateY(4px);
@@ -124,6 +135,10 @@ textarea::placeholder {
 
 .animate-fade-up {
   animation: fadeUp 0.35s both ease;
+}
+
+.animate-fade-down {
+  animation: fadeDown 0.35s both ease;
 }
 
 .animate-indigo-border {
