@@ -107,7 +107,7 @@ function AppShell() {
             <p className="text-sm text-ink">
               Get the Android app for the best tracking experience.
               <a
-                href="https://i.apponthego.com/5defc"
+                href="https://i.apponthego.com/fb14b"
                 target="_blank"
                 rel="noreferrer"
                 className="ml-2 font-semibold text-mint underline underline-offset-2"
