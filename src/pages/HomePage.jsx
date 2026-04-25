@@ -16,7 +16,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { onValue, ref, update } from 'firebase/database';
+import { update, ref } from 'firebase/database';
 import LeagueResultsPanel from '../components/league/LeagueResultsPanel.jsx';
 import MockMap from '../components/map/MockMap.jsx';
 import LastAwakeNotification from '../components/notifications/LastAwakeNotification.jsx';
@@ -43,7 +43,6 @@ function HomePage() {
   const [leagueCode, setLeagueCode] = useState('----');
   const [joinCode, setJoinCode] = useState('');
   const [leagueMessage, setLeagueMessage] = useState('');
-  const [mapPlayers, setMapPlayers] = useState([]);
   const [winnersData, setWinnersData] = useState([]);
   const [dailyRewardData, setDailyRewardData] = useState(null);
   const [activeQuest, setActiveQuest] = useState(null);
@@ -164,37 +163,19 @@ function HomePage() {
     return () => cancelAnimationFrame(frameId);
   }, [awakeCount, sleepingCount, safePlayerData.currentStreak]);
 
-  useEffect(() => {
-    if (!rtdb) {
-      setMapPlayers([]);
-      return undefined;
-    }
-    const playersRef = ref(rtdb, 'dormia/players');
-    const unsubscribe = onValue(
-      playersRef,
-      (snapshot) => {
-        if (!snapshot.exists()) {
-          setMapPlayers([]);
-          return;
-        }
-        const value = snapshot.val();
-        const next = Object.entries(value).map(([uid, item]) => ({
-          uid,
-          displayName: item.displayName ?? 'Player',
-          continent: item.continent ?? 'Europe',
-          isAsleep: item.isAsleep ?? false,
-          lat: item.lat ?? 40.4168,
-          lng: item.lng ?? -3.7038,
-          currentStreak:
-            sourcePlayers.find((player) => player.uid === uid)?.currentStreak ?? 0,
-        }));
-        setMapPlayers(next);
-      },
-      () => setMapPlayers([])
-    );
-
-    return () => unsubscribe();
-  }, [sourcePlayers]);
+  const mapPlayers = useMemo(
+    () =>
+      sourcePlayers.map((player) => ({
+        uid: player.uid,
+        displayName: player.displayName ?? 'Player',
+        continent: player.continent ?? 'Europe',
+        isAsleep: Boolean(player.isAsleep),
+        lat: Number.isFinite(Number(player.lat)) ? Number(player.lat) : 40.4168,
+        lng: Number.isFinite(Number(player.lng)) ? Number(player.lng) : -3.7038,
+        currentStreak: Number(player.currentStreak) || 0,
+      })),
+    [sourcePlayers]
+  );
 
   const handleCreateLeague = async () => {
     if (!currentUser) return;

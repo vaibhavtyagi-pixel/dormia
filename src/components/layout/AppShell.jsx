@@ -30,7 +30,7 @@ function SidebarContent({ onNavigate }) {
     <>
       <div>
         <h1 className="font-sora text-[22px] font-extrabold tracking-tight text-indigo">DORMIA</h1>
-        <p className="mt-1 text-[11px] font-light lowercase text-indigo-light">sleep is now a sport</p>
+        <p className="mt-1 text-[11px] font-light text-indigo-light">Sleep is Now a Sport.</p>
       </div>
 
       <nav className="mt-8 flex flex-col gap-2">

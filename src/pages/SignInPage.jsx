@@ -135,7 +135,7 @@ function SignInPage() {
         </div>
 
         <h1 className="welcome-wordmark">DORMIA</h1>
-        <p className="welcome-sub">Gamified Sleep</p>
+        <p className="welcome-sub">Sleep is Now a Sport.</p>
 
         <div className="welcome-signin-wrap">
           <button type="button" onClick={handleSignIn} disabled={!auth} className="welcome-signin-button">

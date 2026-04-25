@@ -96,6 +96,16 @@ function LeaderboardPage() {
       </div>
 
       <div className="mt-6 space-y-3">
+        {leaderboard.length > 0 ? (
+          <div className="grid items-center gap-3 px-4 text-[11px] font-semibold uppercase tracking-[0.12em] text-text-secondary md:grid-cols-[70px_1.2fr_130px_150px_140px_100px]">
+            <p>Rank</p>
+            <p>Player</p>
+            <p>XP</p>
+            <p>Current Streak</p>
+            <p>Status</p>
+            <p>Current/Best</p>
+          </div>
+        ) : null}
         {leaderboard.map((player, index) => {
           const rank = index + 1;
           const isCurrentUser = player.uid === currentUser?.uid;
