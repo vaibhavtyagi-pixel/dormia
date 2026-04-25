@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
 import { generateCoachPlan } from '../services/improveCoach.js';
@@ -86,9 +86,8 @@ function ImprovePage() {
     }
     const sessionsQuery = query(
       collection(db, 'sleep_sessions'),
-      where('uid', '==', currentUser.uid),
       orderBy('createdAt', 'desc'),
-      limit(14)
+      limit(120)
     );
     const unsubscribe = onSnapshot(
       sessionsQuery,
@@ -100,6 +99,7 @@ function ImprovePage() {
         const rows = snapshot.docs
           .map((item, index) => {
             const data = item.data();
+            if (data?.uid !== currentUser.uid) return null;
             const dateValue =
               typeof data?.createdAt?.toDate === 'function'
                 ? data.createdAt.toDate()
@@ -115,6 +115,8 @@ function ImprovePage() {
               isToday: dateValue.toDateString() === new Date().toDateString(),
             };
           })
+          .filter(Boolean)
+          .slice(0, 14)
           .reverse();
         setWeeklyData(rows);
       },
