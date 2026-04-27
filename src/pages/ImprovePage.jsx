@@ -361,53 +361,6 @@ function ImprovePage() {
         ) : null}
       </article>
 
-      <article className="card card-hover animate-fade-up p-6" style={{ animationDelay: '150ms' }}>
-        <h2 className="font-sora text-xl font-bold text-ink">Your Best Days</h2>
-        {weeklyData.length > 0 ? (
-          <div className="mt-4 grid grid-cols-7 gap-2">
-            {weeklyData.map((day) => (
-              <div key={`${day.date}-${day.day}`} className="text-center">
-                <div
-                  className={`mx-auto flex h-11 w-11 flex-col items-center justify-center rounded-lg border text-[10px] ${
-                    day.hitTarget ? 'bg-mint-pale border-mint text-mint' : 'bg-amber-warm border-amber-pale text-text-secondary'
-                  } ${day.isToday ? 'ring-2 ring-indigo' : ''}`}
-                >
-                  <span>{day.hitTarget ? '✓' : '✕'}</span>
-                  <span className="font-mono">{day.hoursSlept}</span>
-                </div>
-                <p className="mt-1 text-[10px] text-text-secondary">{day.day}</p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-text-secondary">
-            No tracked sleep sessions yet. Sleep/wake from the dashboard to start generating weekly stats.
-          </p>
-        )}
-
-        <h3 className="mt-6 font-sora text-lg font-semibold text-ink">Your best nights</h3>
-        {bestDays.length > 0 ? (
-          <div className="mt-3 grid gap-3 md:grid-cols-3">
-            {bestDays.map((day, idx) => (
-              <div key={`${day.date}-best`} className="rounded-xl border border-border bg-card p-4">
-                <p className="font-medium text-ink">{day.day} · {day.date}</p>
-                <p className="mt-1 font-mono text-3xl text-mint">{day.hoursSlept}h</p>
-                <p className="mt-1 text-sm text-text-secondary">🌙 Slept {day.hoursSlept}h · Hit target · +{day.xpEarned} XP earned</p>
-                <p className="mt-2 text-[13px] italic text-text-secondary">
-                  {idx === 0
-                    ? `You slept best on ${day.day}s — your peak this cycle.`
-                    : idx === 1
-                      ? `${day.day} nights are consistently high-performing for you.`
-                      : `When ${day.day} works, your XP follows immediately.`}
-                </p>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="mt-3 text-sm text-text-secondary">Your best nights will appear once enough sleep history is available.</p>
-        )}
-      </article>
-
       <article className="card card-hover animate-fade-up p-6" style={{ animationDelay: '200ms' }}>
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-sora text-xl font-bold text-ink">Sleep Science Tips</h2>
