@@ -216,7 +216,8 @@ function MockMap({ players, className = '' }) {
           const bg = isMostlyAwake ? 'bg-amber' : 'bg-mint';
           const ring = isMostlyAwake ? 'rgba(251,191,36,0.35)' : 'rgba(110,231,183,0.35)';
           const zoomDamp = Math.pow(zoom, 1.35);
-          const size = Math.max(8, Math.min(14 + cluster.total * 4, 36) / zoomDamp);
+          const densitySize = 12 + Math.sqrt(cluster.total) * 10;
+          const size = Math.max(8, Math.min(densitySize, 44) / zoomDamp);
           const ringWidth = Math.max(2, 6 / zoomDamp);
           return (
             <div
@@ -229,15 +230,13 @@ function MockMap({ players, className = '' }) {
               }}
             >
               <div
-                className={`rounded-full ${bg} flex items-center justify-center font-mono text-[11px] font-semibold text-[#0b122e]`}
+                className={`rounded-full ${bg}`}
                 style={{
                   width: `${size}px`,
                   height: `${size}px`,
                   boxShadow: `0 0 0 ${ringWidth}px ${ring}`,
                 }}
-              >
-                {cluster.total}
-              </div>
+              />
               <div className="pointer-events-none absolute -top-[92px] left-1/2 w-48 -translate-x-1/2 rounded-xl border border-border bg-card p-2 text-[12px] text-ink opacity-0 transition group-hover:opacity-100">
                 <p className="font-semibold">{cluster.total} users in area</p>
                 <p className="text-text-secondary">😴 {cluster.asleepCount} sleeping · ☀️ {cluster.awakeCount} awake</p>
