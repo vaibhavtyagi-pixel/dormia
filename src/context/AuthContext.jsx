@@ -188,14 +188,40 @@ export function AuthProvider({ children }) {
         return;
       }
 
-      const livePlayers = snapshot.docs.map((item) => ({
-        uid: item.id,
-        lat: 40.4168,
-        lng: -3.7038,
-        city: 'Unknown',
-        country: 'Unknown',
-        ...item.data(),
-      }));
+      const repairs = [];
+      const livePlayers = snapshot.docs.map((item) => {
+        const raw = item.data();
+        const xpValue = Number(raw?.xp) || 0;
+        const lastRewardXp = Number(raw?.lastSleepRewardXp) || 0;
+        const normalizedXp = Math.max(xpValue, lastRewardXp);
+        const creditsValue = Number(raw?.credits) || 0;
+        const lastRewardCredits = Number(raw?.lastSleepRewardCredits) || 0;
+        const normalizedCredits = Math.max(creditsValue, lastRewardCredits);
+
+        if (normalizedXp !== xpValue || normalizedCredits !== creditsValue) {
+          repairs.push(
+            updateDoc(doc(db, 'players', item.id), {
+              xp: normalizedXp,
+              credits: normalizedCredits,
+            }).catch(() => undefined)
+          );
+        }
+
+        return {
+          uid: item.id,
+          lat: 40.4168,
+          lng: -3.7038,
+          city: 'Unknown',
+          country: 'Unknown',
+          ...raw,
+          xp: normalizedXp,
+          credits: normalizedCredits,
+        };
+      });
+
+      if (repairs.length > 0) {
+        Promise.all(repairs).catch(() => undefined);
+      }
       setPlayers(livePlayers);
     });
 
