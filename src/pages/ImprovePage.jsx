@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
+import { collection, limit, onSnapshot, orderBy, query, where } from 'firebase/firestore';
 import { useAuth } from '../context/AuthContext.jsx';
 import { db } from '../firebase.js';
 import { generateCoachPlan } from '../services/improveCoach.js';
@@ -61,6 +61,12 @@ function ImprovePage() {
   const [isGeneratingPlan, setIsGeneratingPlan] = useState(false);
   const [reminderMessage, setReminderMessage] = useState('');
   const [weeklyData, setWeeklyData] = useState([]);
+  const [reminderTime, setReminderTime] = useState(() => {
+    const value = new Date(Date.now() + 30 * 60000);
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  });
 
   const sorted = useMemo(
     () =>
@@ -84,45 +90,60 @@ function ImprovePage() {
       setWeeklyData([]);
       return undefined;
     }
+    const mapRows = (snapshot) => {
+      if (snapshot.empty) {
+        setWeeklyData([]);
+        return;
+      }
+      const rows = snapshot.docs
+        .map((item, index) => {
+          const data = item.data();
+          const dateValue =
+            typeof data?.createdAt?.toDate === 'function'
+              ? data.createdAt.toDate()
+              : new Date(Date.now() - index * 86400000);
+          const hoursSlept = Number(data?.sleptHours) || 0;
+          return {
+            id: item.id,
+            day: dateValue.toLocaleDateString('en-US', { weekday: 'short' }),
+            date: dateValue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+            hoursSlept: Number(hoursSlept.toFixed(1)),
+            hitTarget: Boolean(data?.hitTarget),
+            xpEarned: Number(data?.xpEarned) || 0,
+            isToday: dateValue.toDateString() === new Date().toDateString(),
+            createdAtMs: dateValue.getTime(),
+          };
+        })
+        .sort((a, b) => b.createdAtMs - a.createdAtMs)
+        .slice(0, 14)
+        .reverse()
+        .map(({ createdAtMs, ...rest }) => rest);
+      setWeeklyData(rows);
+    };
+
     const sessionsQuery = query(
       collection(db, 'sleep_sessions'),
+      where('uid', '==', currentUser.uid),
       orderBy('createdAt', 'desc'),
       limit(120)
     );
+    let fallbackUnsubscribe = null;
     const unsubscribe = onSnapshot(
       sessionsQuery,
-      (snapshot) => {
-        if (snapshot.empty) {
-          setWeeklyData([]);
-          return;
-        }
-        const rows = snapshot.docs
-          .map((item, index) => {
-            const data = item.data();
-            if (data?.uid !== currentUser.uid) return null;
-            const dateValue =
-              typeof data?.createdAt?.toDate === 'function'
-                ? data.createdAt.toDate()
-                : new Date(Date.now() - index * 86400000);
-            const hoursSlept = Number(data?.sleptHours) || 0;
-            return {
-              id: item.id,
-              day: dateValue.toLocaleDateString('en-US', { weekday: 'short' }),
-              date: dateValue.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-              hoursSlept: Number(hoursSlept.toFixed(1)),
-              hitTarget: Boolean(data?.hitTarget),
-              xpEarned: Number(data?.xpEarned) || 0,
-              isToday: dateValue.toDateString() === new Date().toDateString(),
-            };
-          })
-          .filter(Boolean)
-          .slice(0, 14)
-          .reverse();
-        setWeeklyData(rows);
-      },
-      () => setWeeklyData([])
+      (snapshot) => mapRows(snapshot),
+      () => {
+        const fallbackQuery = query(collection(db, 'sleep_sessions'), where('uid', '==', currentUser.uid), limit(120));
+        fallbackUnsubscribe = onSnapshot(
+          fallbackQuery,
+          (fallbackSnapshot) => mapRows(fallbackSnapshot),
+          () => setWeeklyData([])
+        );
+      }
     );
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+      if (fallbackUnsubscribe) fallbackUnsubscribe();
+    };
   }, [currentUser?.uid]);
 
   const bestDays = useMemo(
@@ -191,10 +212,17 @@ function ImprovePage() {
   };
 
   const handleReminder = () => {
-    const reminderTime = new Date();
-    reminderTime.setMinutes(reminderTime.getMinutes() + 30);
+    if (!reminderTime) return;
+    const [hoursRaw, minutesRaw] = reminderTime.split(':');
+    const hours = Number(hoursRaw);
+    const minutes = Number(minutesRaw);
+    const reminderDate = new Date();
+    reminderDate.setHours(Number.isFinite(hours) ? hours : 22);
+    reminderDate.setMinutes(Number.isFinite(minutes) ? minutes : 0);
+    reminderDate.setSeconds(0);
+    reminderDate.setMilliseconds(0);
     setReminderMessage(
-      `Reminder set for ${reminderTime.toLocaleTimeString([], {
+      `Reminder set for ${reminderDate.toLocaleTimeString([], {
         hour: '2-digit',
         minute: '2-digit',
       })}.`
@@ -250,13 +278,24 @@ function ImprovePage() {
           </svg>
           <h3 className="font-sora text-2xl font-semibold">{tonightFocus.title}</h3>
           <p className="mt-3 text-sm leading-relaxed text-white/90">{tonightFocus.message}</p>
-          <button
-            type="button"
-            onClick={handleReminder}
-            className="mt-5 rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white"
-          >
-            {tonightFocus.cta}
-          </button>
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <label className="text-xs text-white/80">
+              Reminder time
+              <input
+                type="time"
+                value={reminderTime}
+                onChange={(event) => setReminderTime(event.target.value)}
+                className="ml-2 rounded-full border border-white/30 bg-white/10 px-3 py-2 text-sm text-white outline-none"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={handleReminder}
+              className="rounded-full border border-white/30 bg-white/10 px-4 py-2 text-sm font-medium text-white"
+            >
+              {tonightFocus.cta}
+            </button>
+          </div>
           {reminderMessage ? (
             <p className="mt-3 text-xs text-white/85">{reminderMessage}</p>
           ) : null}

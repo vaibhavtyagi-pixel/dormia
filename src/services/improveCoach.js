@@ -1,4 +1,5 @@
 const PREFERRED_GEMINI_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-1.5-pro'];
+const FORBIDDEN_ACTION_REGEX = /(log|record|track).*(sleep duration)|sleep duration.*(log|record|track)/i;
 
 function buildLocalPlan({ streak, sleepTargetHours, gapXp, nightsToClose }) {
   const riskLevel = streak === 0 ? 'high' : streak < 4 ? 'medium' : 'low';
@@ -83,6 +84,26 @@ function rankModels(availableModels) {
   return ranked;
 }
 
+function sanitizeActions(actions = []) {
+  const normalized = actions
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean)
+    .filter((item) => !FORBIDDEN_ACTION_REGEX.test(item));
+
+  const fallbackPool = [
+    'Set a fixed screen-off time 45 minutes before bed.',
+    'Prepare your room to be cool, dark, and quiet before lights out.',
+    'Use one short wind-down ritual at the same time tonight.',
+  ];
+
+  for (const candidate of fallbackPool) {
+    if (normalized.length >= 3) break;
+    if (!normalized.includes(candidate)) normalized.push(candidate);
+  }
+
+  return normalized.slice(0, 3);
+}
+
 export async function generateCoachPlan(input) {
   const apiKey = String(import.meta.env.VITE_GEMINI_API_KEY ?? '').trim();
   if (!apiKey) {
@@ -116,6 +137,7 @@ Constraints:
 - Keep it practical and specific for tonight.
 - No medical diagnosis.
 - Use clear action verbs.
+- Never suggest logging, recording, or tracking sleep duration.
   `.trim();
 
   const requestBody = {
@@ -196,7 +218,7 @@ Constraints:
         model,
         riskLevel: parsed.riskLevel ?? 'medium',
         objective: parsed.objective,
-        actions: parsed.actions.slice(0, 3),
+        actions: sanitizeActions(parsed.actions),
         schedule: Array.isArray(parsed.schedule) ? parsed.schedule.slice(0, 3) : [],
         motivation: parsed.motivation ?? 'Stay consistent tonight.',
       };
